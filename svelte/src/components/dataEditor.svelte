@@ -432,7 +432,7 @@
       editor_state.editor_elements.file_byte_count.innerHTML = String(
         editor_state.editor_metrics.file_byte_count
       )
-      editor_state.editor_elements.logical.innerHTML = 'stuff'
+      editor_state.editor_elements.logical.innerHTML = 'Loading...'
       editor_state.file_content = new Uint8Array(
         await readFile(editor_state.file)
       )
@@ -443,6 +443,10 @@
       editor_state.editor_elements.ascii_byte_count.innerHTML = String(
         editor_state.editor_metrics.ascii_byte_count
       )
+      editor_state.editor_metrics.row_count = Math.ceil(
+        editor_state.file!.size / editor_state.editor_controls.bytes_per_row
+      )
+      editor_state.editor_elements.file_metrics_vw.hidden = false
       editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
         editor_state.file_content,
         editor_state.editor_controls.radix,
@@ -452,11 +456,6 @@
         editor_state.file_content,
         editor_state.editor_controls.bytes_per_row
       )
-      editor_state.editor_elements.logical.innerHTML = 'stuffy iota'
-      editor_state.editor_metrics.row_count = Math.ceil(
-        editor_state.file!.size / editor_state.editor_controls.bytes_per_row
-      )
-      editor_state.editor_elements.file_metrics_vw.hidden = false
     }
   }
 
