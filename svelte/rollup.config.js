@@ -1,7 +1,7 @@
 import svelte from 'rollup-plugin-svelte'
 import commonjs from '@rollup/plugin-commonjs'
 import resolve from '@rollup/plugin-node-resolve'
-import { terser } from 'rollup-plugin-terser'
+import { terser } from 'rollup-terser'
 import sveltePreprocess from 'svelte-preprocess'
 import typescript from '@rollup/plugin-typescript'
 import scss from 'rollup-plugin-scss'
@@ -17,7 +17,7 @@ export default {
     dir: 'dist',
   },
   plugins: [
-    multiInput({ relative: 'src/' }),
+    multiInput.default(),
     svelte({
       preprocess: sveltePreprocess({ sourceMap: !production }),
       compilerOptions: {
@@ -29,7 +29,7 @@ export default {
     // a separate file - better for performance
     scss({
       failOnError: true,
-      output: 'dist/styles.css',
+      fileName: 'styles.css',
     }),
 
     // If you have external dependencies installed from
