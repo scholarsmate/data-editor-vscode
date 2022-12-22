@@ -1,0 +1,69 @@
+{
+  "name": "data-editor",
+  "displayName": "data-editor",
+  "description": "Data Editor extension for VS Code",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.74.2"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:dataEditor.edit"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dataEditor.edit",
+        "category": "Data Editor",
+        "title": "Edit Data"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "concurrently --kill-others \"npm run watch:extension\" \"npm run watch:svelte\"",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "npm run eslint && npm run prettier:check",
+    "lint:fix": "npm run eslint:fix && npm run prettier:fix",
+    "eslint": "eslint --ext ts --report-unused-disable-directives --cache src",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prettier:cli": "yarn run prettier \"**/*.ts\" \"**/*.js\" \"**/*.md\"",
+    "prettier:check": "npm run prettier:cli -- --check",
+    "prettier:fix": "npm run prettier:cli -- --write",
+    "test": "node ./out/test/runTest.js",
+    "watch:extension": "webpack --watch",
+    "compile:svelte": "cd ./svelte && npm run build",
+    "watch:svelte": "cd ./svelte && npm run dev"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^18.11.17",
+    "@types/vscode": "^1.63.0",
+    "@typescript-eslint/eslint-plugin": "^5.1.0",
+    "@typescript-eslint/parser": "^5.1.0",
+    "@vscode/test-electron": "^2.2.1",
+    "concurrently": "^7.0.0",
+    "eslint": "^8.1.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "glob": "^8.0.3",
+    "mocha": "^10.2.0",
+    "prettier": "^2.8.1",
+    "sass": "^1.47.0",
+    "stream-browserify": "^3.0.0",
+    "svelte": "^3.55.0",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.4.4",
+    "webpack": "^5.52.1",
+    "webpack-cli": "^5.0.1"
+  },
+  "dependencies": {}
+}
