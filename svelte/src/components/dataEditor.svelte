@@ -1,4 +1,6 @@
 <script lang="ts">
+  const vscode = acquireVsCodeApi();
+  
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -264,6 +266,13 @@
       updateDataView()
       refreshEditor()
     })
+    editor_state.editor_elements.commit_button.addEventListener('click', () => {
+      vscode.postMessage({command: "commit", data: "testdata", srcElement: "commit_btn"});
+    })
+    editor_state.editor_elements.add_data_breakpoint_button.addEventListener('click', () => {
+      vscode.postMessage({command: "set_break", data: "testdata", srcElement: "add_data_breakpoint_button"});
+    })
+    
     const advanced_mode = document.getElementById(
       'advanced_mode'
     ) as HTMLInputElement
