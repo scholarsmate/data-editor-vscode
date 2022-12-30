@@ -5,7 +5,7 @@ import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
 export class WebView implements vscode.Disposable {
   private panel: vscode.WebviewPanel
   private svelteWebviewInitializer: SvelteWebviewInitializer
-  private fileToEdit: string | null = ""
+  private fileToEdit: string = ""
 
   constructor(
     protected context: vscode.ExtensionContext,
