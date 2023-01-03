@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "@vscode/webview-ui-toolkit"
+  
+  provideVSCodeDesignSystem().register(vsCodeButton(), vsCodeCheckbox(), vsCodeDropdown(), vsCodeOption(), vsCodeTextField())
+
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -962,24 +966,39 @@
   <fieldset class="box">
     <legend>radix</legend>
     <div class="radix">
-      <select id="radix">
-        <option value="2">2 (BIN)</option>
-        <option value="8">8 (OCT)</option>
-        <option value="10">10 (DEC)</option>
-        <option value="16" selected>16 (HEX)</option>
-      </select>
+      <vscode-dropdown id="radix">
+        <vscode-option value="2">2 (BIN)</vscode-option>
+        <vscode-option value="8">8 (OCT)</vscode-option>
+        <vscode-option value="10">10 (DEC)</vscode-option>
+        <vscode-option value="16" selected>16 (HEX)</vscode-option>
+      </vscode-dropdown>
+    </div>
+  </fieldset>
+  <fieldset class="box">
+    <legend>search</legend>
+    <div class="search">
+      <vscode-text-field id="search">
+        search: 
+        <section slot="end" style="display:flex; align-items: center;">
+          <vscode-button appearance="icon" aria-label="Case Sensitive">
+            <span class="codicon codicon-preserve-case"></span>
+          </vscode-button>
+          <vscode-button appearance="icon" aria-label="Case Insensitive">
+            <span class="codicon codicon-case-sensitive"></span>
+          </vscode-button>
+        </section>
+      </vscode-text-field>
+      <vscode-text-field id="replace">
+        <vscode-checkbox id="do_replace" checked/> replace: 
+      </vscode-text-field>
     </div>
   </fieldset>
   <fieldset class="box">
     <legend>misc</legend>
-    <div class="radix">
-      <label
-        >advanced mode<input
-          type="checkbox"
-          id="advanced_mode"
-          checked
-        /></label
-      >
+    <div class="misc">
+      <label for="advanced_mode">advanced mode
+        <vscode-checkbox id="advanced_mode" checked/>
+      </label>
     </div>
   </fieldset>
 </header>
@@ -990,12 +1009,12 @@
   <div class="hd">logical</div>
   <div class="hd">edit</div>
   <div class="measure" style="align-items: center;">
-    <select class="address_type" id="address_numbering">
-      <option value="10">decimal</option>
-      <option value="16">hexadecimal</option>
-      <option value="8">octal</option>
-      <option value="2">binary</option>
-    </select>
+    <vscode-dropdown class="address_type" id="address_numbering">
+      <vscode-option value="10">decimal</vscode-option>
+      <vscode-option value="16">hexadecimal</vscode-option>
+      <vscode-option value="8">octal</vscode-option>
+      <vscode-option value="2">binary</vscode-option>
+    </vscode-dropdown>
   </div>
   <div class="measure"><span id="physical_offsets" /></div>
   <div class="measure"><span id="logical_offsets" /></div>
@@ -1013,29 +1032,31 @@
     <fieldset class="box">
       <legend>content controls</legend>
       <div class="contentControls" id="content_controls">
-        <div>
-          <button id="commit_btn" disabled> commit changes </button>
-          committed changes: <span id="change_cnt">0</span>
-          <button id="add_data_breakpoint_btn" disabled>
-            set breakpoint
-          </button>
-          breakpoints: <span id="data_breakpoint_cnt">0</span>
+        <div class="grid-container-two-columns">
+          <div>
+            <vscode-button id="commit_btn" disabled>commit changes</vscode-button>
+            <br/>
+            committed changes: <span id="change_cnt">0</span>
+          </div>
+          <div>
+            <vscode-button id="add_data_breakpoint_btn" disabled>set breakpoint</vscode-button>
+            <br/>
+            breakpoints: <span id="data_breakpoint_cnt">0</span>
+          </div>
         </div>
         <hr />
         <div class="grid-container-two-columns">
           <div class="grid-container-column">
             <div>
-              <label
-                >endianness:
-                <select id="endianness">
-                  <option value="le">little</option>
-                  <option value="be">big</option>
-                </select>
+              <label for="endianness">endianness:
+                <vscode-dropdown id="endianness">
+                  <vscode-option value="le">little</vscode-option>
+                  <vscode-option value="be">big</vscode-option>
+                </vscode-dropdown>
               </label>
             </div>
             <div>
-              <label
-                >encoding:
+              <label for="edit_encoding">encoding:
                 <select id="edit_encoding">
                   <optgroup label="Binary Encodings">
                     <option value="hex">Hexadecimal</option>
@@ -1055,22 +1076,22 @@
               </label>
             </div>
             <div class="advanced">
-              <label
+              <label for="lsb"
                 >least significant bit:
-                <select id="lsb">
-                  <option value="h">higher offset</option>
-                  <option value="l">lower offset</option>
-                </select>
+                <vscode-dropdown id="lsb">
+                  <vscode-option value="h">higher offset</vscode-option>
+                  <vscode-option value="l">lower offset</vscode-option>
+                </vscode-dropdown>
               </label>
             </div>
             <div class="advanced">
-              <label
+              <label for="logical_byte_size"
                 >logical byte size:
-                <select id="logical_byte_size">
-                  <option>8</option>
-                  <option>7</option>
-                  <option>6</option>
-                </select>
+                <vscode-dropdown id="logical_byte_size">
+                  <vscode-option>8</vscode-option>
+                  <vscode-option>7</vscode-option>
+                  <vscode-option>6</vscode-option>
+                </vscode-dropdown>
               </label>
             </div>
           </div>
@@ -1120,7 +1141,6 @@
   /* fonts */
   main {
     font-family: monospace;
-    font-size: 12px;
   }
 
   legend {
@@ -1134,9 +1154,6 @@
     flex: 0 1 auto;
   }
 
-  button,
-  input,
-  select,
   textarea {
     color: inherit;
     background-color: inherit;
@@ -1214,33 +1231,6 @@
 
   .dataEditor textarea.selectedContent {
     background: #2c2c2c;
-  }
-
-  .dataEditor button {
-    margin: 5px;
-    padding: 4px 8px;
-    background: darkgreen;
-    border: 1px solid #dedede;
-    font-weight: bold;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-
-  .dataEditor button:active {
-    background: lime;
-    font-weight: bolder;
-    color: black;
-    box-shadow: inset 0 0 5px white;
-    outline: none;
-  }
-
-  .dataEditor button:disabled {
-    color: #444444;
-    border: 1px solid #444444;
-    font-weight: lighter;
-    background: #696969;
-    cursor: not-allowed;
-    pointer-events: none;
   }
 
   .grid-container-two-columns {
