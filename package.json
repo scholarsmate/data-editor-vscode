@@ -52,7 +52,7 @@
     "@typescript-eslint/parser": "^5.48.0",
     "@vscode/test-electron": "^2.2.1",
     "concurrently": "^7.0.0",
-    "eslint": "^8.1.0",
+    "eslint": "^8.31.0",
     "eslint-plugin-prettier": "^4.2.1",
     "glob": "^8.0.3",
     "mocha": "^10.2.0",
