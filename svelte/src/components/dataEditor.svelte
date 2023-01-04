@@ -1083,8 +1083,7 @@
               </label>
             </div>
             <div class="advanced">
-              <label for="lsb"
-                >least significant bit:
+              <label for="lsb">least significant bit:
                 <vscode-dropdown id="lsb">
                   <vscode-option value="h">higher offset</vscode-option>
                   <vscode-option value="l">lower offset</vscode-option>
@@ -1092,8 +1091,7 @@
               </label>
             </div>
             <div class="advanced">
-              <label for="logical_byte_size"
-                >logical byte size:
+              <label for="logical_byte_size">logical byte size:
                 <vscode-dropdown id="logical_byte_size">
                   <vscode-option>8</vscode-option>
                   <vscode-option>7</vscode-option>
