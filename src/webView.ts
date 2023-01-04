@@ -16,7 +16,7 @@ type EditorMessage = {
 export class WebView implements vscode.Disposable {
   private panel: vscode.WebviewPanel
   private svelteWebviewInitializer: SvelteWebviewInitializer
-  private fileToEdit: string = ""
+  private fileToEdit: string = ''
 
   constructor(
     protected context: vscode.ExtensionContext,
@@ -45,17 +45,19 @@ export class WebView implements vscode.Disposable {
   private createPanel(title: string): vscode.WebviewPanel {
     vscode.window
       .showOpenDialog({
-      canSelectMany: false,
-      openLabel: 'Select',
-      canSelectFiles: true,
-      canSelectFolders: false,
-    })
-    .then((fileUri) => {
-      if (fileUri && fileUri[0]) {
-        this.fileToEdit = fileUri[0].fsPath
-      }
-      vscode.window.showInformationMessage("Selected file: " + this.fileToEdit)
-    })
+        canSelectMany: false,
+        openLabel: 'Select',
+        canSelectFiles: true,
+        canSelectFolders: false,
+      })
+      .then((fileUri) => {
+        if (fileUri && fileUri[0]) {
+          this.fileToEdit = fileUri[0].fsPath
+        }
+        vscode.window.showInformationMessage(
+          'Selected file: ' + this.fileToEdit
+        )
+      })
 
     const column =
       vscode.window.activeTextEditor &&
