@@ -967,10 +967,10 @@
     <legend>radix</legend>
     <div class="radix">
       <vscode-dropdown id="radix">
-        <vscode-option value="2">2 (BIN)</vscode-option>
-        <vscode-option value="8">8 (OCT)</vscode-option>
-        <vscode-option value="10">10 (DEC)</vscode-option>
-        <vscode-option value="16" selected>16 (HEX)</vscode-option>
+        <vscode-option value="2">BIN</vscode-option>
+        <vscode-option value="8">OCT</vscode-option>
+        <vscode-option value="10">DEC</vscode-option>
+        <vscode-option value="16" selected>HEX</vscode-option>
       </vscode-dropdown>
     </div>
   </fieldset>
@@ -1099,24 +1099,22 @@
             <div id="data_vw" hidden>
               &nbsp;offset: <span id="offset_dv">-</span>
               <span id="b8_dv">
-                <br /><label
-                  >&nbsp;&nbsp;&nbsp;int8: <input id="int8_dv" /></label
-                >
-                <br /><label>&nbsp;&nbsp;uint8: <input id="uint8_dv" /></label>
+                <br /><label for="int8_dv">&nbsp;&nbsp;&nbsp;int8: <vscode-text-field id="int8_dv" /></label>
+                <br /><label for="uint8_dv">&nbsp;&nbsp;uint8: <vscode-text-field id="uint8_dv" /></label>
               </span>
               <span id="b16_dv">
-                <br /><label>&nbsp;&nbsp;int16: <input id="int16_dv" /></label>
-                <br /><label>&nbsp;uint16: <input id="uint16_dv" /></label>
+                <br /><label for="int16_dv">&nbsp;&nbsp;int16: <vscode-text-field id="int16_dv" /></label>
+                <br /><label for="uint16_dv">&nbsp;uint16: <vscode-text-field id="uint16_dv" /></label>
               </span>
               <span id="b32_dv">
-                <br /><label>&nbsp;&nbsp;int32: <input id="int32_dv" /></label>
-                <br /><label>&nbsp;uint32: <input id="uint32_dv" /></label>
-                <br /><label>float32: <input id="float32_dv" /></label>
+                <br /><label for="int32_dv">&nbsp;&nbsp;int32: <vscode-text-field id="int32_dv" /></label>
+                <br /><label for="uint32_dv">&nbsp;uint32: <vscode-text-field id="uint32_dv" /></label>
+                <br /><label for="float32_dv">float32: <vscode-text-field id="float32_dv" /></label>
               </span>
               <span id="b64_dv">
-                <br /><label>&nbsp;&nbsp;int64: <input id="int64_dv" /></label>
-                <br /><label>&nbsp;uint64: <input id="uint64_dv" /></label>
-                <br /><label>float64: <input id="float64_dv" /></label>
+                <br /><label for="int64_dv">&nbsp;&nbsp;int64: <vscode-text-field id="int64_dv" /></label>
+                <br /><label for="uint64_dv">&nbsp;uint64: <vscode-text-field id="uint64_dv" /></label>
+                <br /><label for="float64_dv">float64: <vscode-text-field id="float64_dv" /></label>
               </span>
             </div>
           </div>
@@ -1169,8 +1167,8 @@
     grid-template-rows: max-content max-content auto;
     gap: 1px;
     overflow: auto;
-    resize: vertical;
-    min-height: 500px;
+    min-height: 640px;
+    height: 100%;
     font-family: monospace;
   }
   /* display of binary encoded data takes more space in the physical view */
@@ -1238,7 +1236,4 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .grid-container-column {
-    border: 1px solid whitesmoke;
-  }
 </style>
