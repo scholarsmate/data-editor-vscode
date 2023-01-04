@@ -1,11 +1,15 @@
 import * as vscode from 'vscode'
 import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
 
+enum MessageCommand {
+  commit,
+  addBreakpoint,
+}
 /** Data editor message data structure for communication between Webview and VSCode. */
 type EditorMessage = {
-  command: string,
+  command: MessageCommand,
   data: string,
-  srcElement?: string
+  srcElement?: HTMLElement
 }
 
 export class WebView implements vscode.Disposable {
@@ -46,11 +50,10 @@ export class WebView implements vscode.Disposable {
   }
 
   private messageReceiver(message: EditorMessage) {
-    if( message.srcElement === "commit_btn" ) {
-      vscode.window.showInformationMessage(`Sending commit changes message to Omega Edit.\nData: ${message.data}`);
-    }
-    if( message.srcElement === "add_data_breakpoint_button" ) {
-      vscode.window.showInformationMessage(`Sending add breakpoint message to Omega Edit.\nData: ${message.data}`);
+    vscode.window.showInformationMessage(`Received <${message.command}> signal from UI.`);
+    
+    switch( message.command ) {
+      // TODO: Specific cmd functionality to Omega Edit.
     }
   }
 }
