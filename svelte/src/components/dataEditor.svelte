@@ -996,9 +996,10 @@
         </section>
       </vscode-text-field>
       <vscode-text-field id="replace">
-        <vscode-checkbox id="do_replace" checked/> replace: 
+        replace: 
       </vscode-text-field>
       <br /><vscode-button id="search_btn"disabled>search</vscode-button>
+      <vscode-button id="replace_btn"disabled>replace</vscode-button>
     </div>
   </fieldset>
   <fieldset class="box">
