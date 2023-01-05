@@ -1,6 +1,11 @@
 <script lang="ts">
   const vscode = acquireVsCodeApi();
-  
+
+  enum MessageCommand {
+    commit,
+    addBreakpoint,
+    processSelection
+  }
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -293,8 +298,8 @@
     edit_encoding.addEventListener('change', () =>
       selectEditEncoding(edit_encoding.value)
     )
-    const file_input = document.getElementById('file_input') as HTMLInputElement
-    file_input.addEventListener('change', () => loadContent(file_input.files))
+    // const file_input = document.getElementById('file_input') as HTMLInputElement
+    // file_input.addEventListener('change', () => loadContent(file_input.files))
     const endianness = document.getElementById('endianness') as HTMLInputElement
     endianness.addEventListener('change', () =>
       selectEndianness(endianness.value)
@@ -730,10 +735,10 @@
     editor_state.editor_controls.editor_cursor_pos = 0
     editor_state.editor_controls.offset = selectionStart
     editor_state.editor_controls.length = selectionStart - selectionEnd
-    editor_state.edit_content = editor_state.file_content!.slice(
-      selectionStart,
-      selectionEnd
-    )
+    // editor_state.edit_content = editor_state.file_content!.slice(
+    //   selectionStart,
+    //   selectionEnd
+    // )
     editor_state.editor_elements.editor.scrollTo(0, 0)
     editor_state.editor_elements.selected_offsets.innerHTML =
       selected.id +
@@ -746,26 +751,34 @@
     editor_state.editor_elements.data_view_offset.innerHTML =
       String(selectionStart)
     editor_state.editor_elements.editor_offsets.innerHTML = '-'
-    try {
-      editor_state.editor_elements.editor.value = Buffer.from(
-        editor_state.edit_content
-      ).toString(editor_state.editor_controls.edit_encoding)
-    } catch (e) {
-      console.error(
-        'decoding into ' +
-          editor_state.editor_controls.edit_encoding +
-          ' failed: ' +
-          e
-      )
-      editor_state.editor_elements.editor.value = new TextDecoder().decode(
-        editor_state.edit_content
-      )
-    }
-    editor_state.editor_elements.editor.scrollTo(
-      0,
-      editor_state.editor_elements.editor.scrollHeight
-    )
-    updateDataView()
+    console.log(`${selectionStart}, ${selectionEnd}`)    
+    vscode.postMessage({
+      command: MessageCommand.processSelection,
+      data: {
+        start: selectionStart,
+        end: selectionEnd
+      }
+    });
+    // try {
+    //   editor_state.editor_elements.editor.value = Buffer.from(
+    //     editor_state.edit_content
+    //   ).toString(editor_state.editor_controls.edit_encoding)
+    // } catch (e) {
+    //   console.error(
+    //     'decoding into ' +
+    //       editor_state.editor_controls.edit_encoding +
+    //       ' failed: ' +
+    //       e
+    //   )
+    //   editor_state.editor_elements.editor.value = new TextDecoder().decode(
+    //     editor_state.edit_content
+    //   )
+    // }
+    // editor_state.editor_elements.editor.scrollTo(
+    //   0,
+    //   editor_state.editor_elements.editor.scrollHeight
+    // )
+    // updateDataView()
   }
 
   function frameSelected(selected: HTMLTextAreaElement) {
@@ -944,6 +957,21 @@
     }
   }
 
+  window.addEventListener('message', (msg) => {
+    switch( msg.data.command ) {
+      case 'loadFile':
+        editor_state.editor_elements.address.innerHTML = msg.data.display.address;
+        editor_state.editor_elements.physical_offsets.innerHTML = msg.data.display.physicalOffset;
+        editor_state.editor_elements.physical.innerHTML = msg.data.display.physical;
+        editor_state.editor_elements.logical_offsets.innerHTML = msg.data.display.logicalOffset;
+        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical;
+        editor_state.editor_elements.file_type.innerHTML = msg.data.metrics.type;
+        editor_state.editor_elements.file_byte_count.innerHTML = msg.data.metrics.size;
+        editor_state.editor_elements.ascii_byte_count.innerHTML = msg.data.metrics.asciiCount;
+        break;
+    }
+  })
+
   window.onload = () => {
     init()
   }
@@ -951,15 +979,12 @@
 
 <header>
   <fieldset class="box">
-    <legend>file to view</legend>
-    <div class="filetoview">
-      <input type="file" id="file_input" />
-    </div>
-    <div id="file_metrics_vw" hidden>
+    <legend>File Metrics</legend>
+    <div id="file_metrics_vw">
       <hr />
-      file type:<span id="file_type">-</span>
-      <br />file size: <span id="file_byte_cnt">0</span>
-      <br />ASCII count: <span id="ascii_byte_cnt">0</span>
+      Type:<span id="file_type"> -</span>
+      <br />Size: <span id="file_byte_cnt"> 0</span>
+      <br />ASCII count: <span id="ascii_byte_cnt"> 0</span>
     </div>
   </fieldset>
   <fieldset class="box">
@@ -999,11 +1024,11 @@
   <div class="hd">logical</div>
   <div class="hd">edit</div>
   <div class="measure" style="align-items: center;">
-    <select class="address_type" id="address_numbering">
-      <option value="10">decimal</option>
-      <option value="16">hexadecimal</option>
-      <option value="8">octal</option>
-      <option value="2">binary</option>
+    <select class="address_type" id="address_numbering" style="min-width: 100%;">
+      <option value="10">Decimal</option>
+      <option value="16">Hexadecimal</option>
+      <option value="8">Octal</option>
+      <option value="2">Binary</option>
     </select>
   </div>
   <div class="measure"><span id="physical_offsets" /></div>
@@ -1130,6 +1155,7 @@
   main {
     font-family: monospace;
     font-size: 12px;
+    min-height: 100%;
   }
 
   legend {

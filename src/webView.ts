@@ -1,17 +1,11 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
+import { encodeForDisplay, makeAddressRange, makeOffsetRange, logicalDisplay } from './fileUtils'
+import { EditorMessage, MessageCommand } from './messageHandler'
 
-enum MessageCommand {
-  commit,
-  addBreakpoint,
-}
 /** Data editor message data structure for communication between Webview and VSCode. */
-type EditorMessage = {
-  command: MessageCommand,
-  data: string,
-  srcElement?: HTMLElement
-}
+
 
 export class WebView implements vscode.Disposable {
   private panel: vscode.WebviewPanel
@@ -54,7 +48,23 @@ export class WebView implements vscode.Disposable {
       if (fileUri && fileUri[0]) {
         this.fileToEdit = fileUri[0].fsPath
       }
-      vscode.window.showInformationMessage("Selected file: " + this.fileToEdit)
+      const data = fs.readFileSync(this.fileToEdit);
+
+      this.panel.webview.postMessage({
+        command: 'loadFile',
+        metrics: { 
+          type: fs.statSync(this.fileToEdit).mode, 
+          size: data.length, 
+          asciiCount: 0 
+        },
+        display: {
+          address: makeAddressRange(0, Math.ceil(data.length / 16), 16, 16),
+          physicalOffset: makeOffsetRange(10, 2),
+          physical: encodeForDisplay(data, 16, 16),
+          logicalOffset: makeOffsetRange(10, 1),
+          logical: logicalDisplay(data, 16)
+        }
+      });
     })
 
     const column =
@@ -66,10 +76,10 @@ export class WebView implements vscode.Disposable {
   }
 
   private messageReceiver(message: EditorMessage) {
-    vscode.window.showInformationMessage(`Received <${message.command}> signal from UI.`);
-    
     switch( message.command ) {
-      // TODO: Specific cmd functionality to Omega Edit.
+      case MessageCommand.processSelection:
+        vscode.window.showInformationMessage( `Send index [${message.data.start}:${message.data.end}]` )
+        break;
     }
   }
 }
