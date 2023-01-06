@@ -4,8 +4,30 @@
   enum MessageCommand {
     commit,
     addBreakpoint,
-    processSelection
+    processSelection,
+    editorSelection,
+    loadFile,
+    addressTypeChange,
+    configUpdate
   }
+
+ type AddressState = {
+  start: number,
+  end: number,
+  stride: number,
+  radix: number
+}
+ type PhysicalDisplayState = {
+  radix: number,
+  bytesPerRow: number
+}
+ type LogicalDisplayState = {
+  bytesPerRow: number
+}
+ type OffsetState = {
+  radix: number,
+  spread: number
+}
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -524,6 +546,12 @@
   }
 
   function selectAddressType(addressType: number) {
+    var addressState: AddressState;
+    var physicalOffsetState: OffsetState;
+    var physicalDisplayState: PhysicalDisplayState;
+    var logicalOffsetState: OffsetState;
+    var logicalDisplayState: LogicalDisplayState;
+
     editor_state.editor_controls.address_numbering = addressType
     if (
       editor_state.editor_controls.address_numbering === 2 &&
@@ -532,30 +560,52 @@
       editor_state.editor_controls.radix = 2
       editor_state.editor_controls.bytes_per_row = 8
       editor_state.editor_elements.data_editor.classList.add('binary')
-      if (editor_state.file_content) {
-        editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
-          editor_state.file_content,
-          editor_state.editor_controls.address_numbering,
-          editor_state.editor_controls.bytes_per_row
-        )
+      // if (editor_state.file_content) {
+      //   editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
+      //     editor_state.file_content,
+      //     editor_state.editor_controls.address_numbering,
+      //     editor_state.editor_controls.bytes_per_row
+      //   )
+      // }
+      // editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
+      //   editor_state.editor_controls.address_numbering,
+      //   1
+      // )
+      // editor_state.editor_elements.address.innerHTML = makeAddressRange(
+      //   0,
+      //   Math.ceil(
+      //     editor_state.editor_elements.physical.innerHTML.length /
+      //       editor_state.editor_elements.physical.innerHTML.indexOf('\n')
+      //   ),
+      //   8,
+      //   10
+      // )
+      // editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
+      //   editor_state.editor_controls.radix * -1,
+      //   1
+      // )
+      addressState = {
+        start: 0,
+        end: parseInt(editor_state.editor_elements.file_byte_count.innerHTML) / editor_state.editor_controls.bytes_per_row ,
+        stride: 8,
+        radix: 10
       }
-      editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
-        1
-      )
-      editor_state.editor_elements.address.innerHTML = makeAddressRange(
-        0,
-        Math.ceil(
-          editor_state.editor_elements.physical.innerHTML.length /
-            editor_state.editor_elements.physical.innerHTML.indexOf('\n')
-        ),
-        8,
-        10
-      )
-      editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.radix * -1,
-        1
-      )
+      physicalOffsetState = {
+        radix: editor_state.editor_controls.address_numbering,
+        spread: 1
+      }
+      physicalDisplayState = {
+        radix: editor_state.editor_controls.address_numbering,
+        bytesPerRow: editor_state.editor_controls.bytes_per_row 
+      }
+      logicalOffsetState = { 
+        radix: editor_state.editor_controls.radix * -1,
+        spread: 1
+      }
+      logicalDisplayState = {
+        bytesPerRow: 8
+      }
+
     } else {
       editor_state.editor_controls.bytes_per_row = 16
       if (
@@ -563,31 +613,39 @@
       ) {
         editor_state.editor_elements.data_editor.classList.remove('binary')
       }
-      if (editor_state.file_content) {
-        editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
-          editor_state.file_content,
-          16,
-          editor_state.editor_controls.bytes_per_row
-        )
+      addressState = {
+        start: 0,
+        end: parseInt(editor_state.editor_elements.file_byte_count.innerHTML) / editor_state.editor_controls.bytes_per_row ,
+        stride: 16,
+        radix: editor_state.editor_controls.address_numbering
       }
-      editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
-        2
-      )
-      editor_state.editor_elements.address.innerHTML = makeAddressRange(
-        0,
-        Math.ceil(
-          editor_state.editor_elements.physical.innerHTML.length /
-            editor_state.editor_elements.physical.innerHTML.indexOf('\n')
-        ),
-        16,
-        editor_state.editor_controls.address_numbering
-      )
-      editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
-        1
-      )
+      physicalOffsetState = {
+        radix: editor_state.editor_controls.address_numbering,
+        spread: 2
+      }
+      physicalDisplayState = {
+        radix: 16,
+        bytesPerRow: editor_state.editor_controls.bytes_per_row 
+      }
+      logicalOffsetState = { 
+        radix: editor_state.editor_controls.address_numbering,
+        spread: 1
+      }
+      logicalDisplayState = {
+        bytesPerRow: 16
+      }
     }
+
+    vscode.postMessage({
+      command: MessageCommand.addressTypeChange,
+      data: {
+        address: addressState,
+        physicalOffset: physicalOffsetState,
+        physicalDisplay: physicalDisplayState,
+        logicalOffset: logicalOffsetState,
+        logicalDisplay: logicalDisplayState
+      }
+    })
   }
 
   function updateDataView() {
@@ -751,13 +809,15 @@
     editor_state.editor_elements.data_view_offset.innerHTML =
       String(selectionStart)
     editor_state.editor_elements.editor_offsets.innerHTML = '-'
-    console.log(`${selectionStart}, ${selectionEnd}`)    
+
     vscode.postMessage({
       command: MessageCommand.processSelection,
       data: {
         start: selectionStart,
-        end: selectionEnd
+        end: selectionEnd,
+        encoding: editor_state.editor_controls.edit_encoding
       }
+
     });
     // try {
     //   editor_state.editor_elements.editor.value = Buffer.from(
@@ -959,7 +1019,7 @@
 
   window.addEventListener('message', (msg) => {
     switch( msg.data.command ) {
-      case 'loadFile':
+      case MessageCommand.loadFile:
         editor_state.editor_elements.address.innerHTML = msg.data.display.address;
         editor_state.editor_elements.physical_offsets.innerHTML = msg.data.display.physicalOffset;
         editor_state.editor_elements.physical.innerHTML = msg.data.display.physical;
@@ -969,11 +1029,21 @@
         editor_state.editor_elements.file_byte_count.innerHTML = msg.data.metrics.size;
         editor_state.editor_elements.ascii_byte_count.innerHTML = msg.data.metrics.asciiCount;
         break;
+      case MessageCommand.editorSelection:
+        editor_state.editor_elements.editor.value = msg.data.content;
+        break;
+      case MessageCommand.addressTypeChange:
+        editor_state.editor_elements.address.innerHTML = msg.data.display.address;
+        editor_state.editor_elements.physical_offsets.innerHTML = msg.data.display.physicalOffset;
+        editor_state.editor_elements.physical.innerHTML = msg.data.display.physical;
+        editor_state.editor_elements.logical_offsets.innerHTML = msg.data.display.logicalOffset;
+        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical;
+        break;
     }
   })
 
   window.onload = () => {
-    init()
+    init();
   }
 </script>
 
