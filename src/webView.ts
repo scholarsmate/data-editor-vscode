@@ -91,18 +91,15 @@ export class WebView implements vscode.Disposable {
         this.panel.webview.postMessage({
           command: MessageCommand.editorSelection,
           content: this.fileData.slice(start, end).toString(message.data.encoding)
-        })
+        });
 
         break;
       case MessageCommand.addressTypeChange:
-        console.log(message);
-
         this.displayState.updateAddressState(message.data.address);
         this.displayState.updatePhysicalDisplayState(message.data.physicalDisplay);
         this.displayState.updatePhysicalOffsetState(message.data.physicalOffset);
         this.displayState.updateLogicalOffsetState(message.data.logicalOffset);
-        this.displayState.updateLogicalDisplayState(message.data.logicalDisplay);
-        console.log(this.displayState);
+        this.displayState.updateLogicalDisplayState(message.data.logicalDisplay); 
         this.panel.webview.postMessage({
           command: MessageCommand.addressTypeChange,
           display: {
