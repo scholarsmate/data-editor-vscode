@@ -1,9 +1,8 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
-import { encodeForDisplay, makeAddressRange, makeOffsetRange, logicalDisplay, DisplayState } from './fileUtils'
+import { DataView, encodeForDisplay, makeAddressRange, makeOffsetRange, logicalDisplay, DisplayState } from './fileUtils'
 import { EditorMessage, MessageCommand } from './messageHandler'
-import { log } from 'util'
 
 /** Data editor message data structure for communication between Webview and VSCode. */
 
@@ -111,11 +110,32 @@ export class WebView implements vscode.Disposable {
         this.panel.webview.postMessage({
           command: MessageCommand.editorChange,
           display: {
-            editor: data
+            editor: data,
+            dataView: this.populateDataView()
           }
         });
-        console.log(this.displayState, data);
         break;
     }
+  }
+  private populateDataView(): DataView {
+    let pos = this.displayState.editorDisplay.cursor
+    let radix = this.displayState.physicalDisplay.radix
+    let ret: DataView = {
+      int64: this.fileData.readBigInt64LE(pos).toString(radix),
+      uint64: this.fileData.readBigUint64LE(pos).toString(radix),
+      float64: this.fileData.readFloatLE(pos).toString(radix),
+      float32: this.fileData.readFloatLE(pos).toString(radix),
+      int32: this.fileData.readInt32LE(pos).toString(radix),
+      uint32: this.fileData.readUint32LE(pos).toString(radix),
+      int16: this.fileData.readInt16LE(pos).toString(radix),
+      uint16: this.fileData.readUint16LE(pos).toString(radix),
+      int8: this.fileData.readInt8(pos).toString(radix),
+      uint8: this.fileData.readUInt8(pos).toString(radix),
+      b8: "",
+      b16: "",
+      b32: "",
+      b64: ""
+    }
+    return ret
   }
 }

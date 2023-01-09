@@ -430,7 +430,20 @@
           String(editor_state.editor_controls.editor_selection_end) +
           ', cursor: ' +
           String(editor_state.editor_controls.editor_cursor_pos)
-    updateDataView()
+
+    let editorMsg: EditorDisplayState = {
+      start: editor_state.editor_elements.editor.selectionStart,
+      end: editor_state.editor_elements.editor.selectionEnd,
+      cursor: editor_state.editor_controls.editor_cursor_pos,
+      encoding: editor_state.editor_controls.edit_encoding
+    } // Add radix: editor_state.editor_controls.radix
+
+    console.log(editorMsg)
+    vscode.postMessage({
+      command: MessageCommand.editorChange,
+      data: { editor: editorMsg }
+    })
+    // updateDataView()
   }
 
   function selectEndianness(endianness: string) {
@@ -447,8 +460,6 @@
     if (files) {
       editor_state.file = files[0] as File
       editor_state.editor_elements.editor.value = ''
-      editor_state.editor_elements.commit_button.disabled = false
-      editor_state.editor_elements.add_data_breakpoint_button.disabled = false
       editor_state.editor_metrics.file_byte_count = editor_state.file.size
       editor_state.editor_controls.goto_offset = 0
       editor_state.editor_elements.goto_offset.max = String(
@@ -798,38 +809,23 @@
     editor_state.editor_elements.data_view_offset.innerHTML =
       String(selectionStart)
     editor_state.editor_elements.editor_offsets.innerHTML = '-'
-    
+
     let editorMsg: EditorDisplayState = {
       start: selectionStart,
       end: selectionEnd,
       encoding: editor_state.editor_controls.edit_encoding,
       cursor: editor_state.editor_controls.editor_cursor_pos
     }
-
+    console.log(editorMsg)
     vscode.postMessage({
       command: MessageCommand.editorChange,
       data: { editor: editorMsg }
     });
-    // try {
-    //   editor_state.editor_elements.editor.value = Buffer.from(
-    //     editor_state.edit_content
-    //   ).toString(editor_state.editor_controls.edit_encoding)
-    // } catch (e) {
-    //   console.error(
-    //     'decoding into ' +
-    //       editor_state.editor_controls.edit_encoding +
-    //       ' failed: ' +
-    //       e
-    //   )
-    //   editor_state.editor_elements.editor.value = new TextDecoder().decode(
-    //     editor_state.edit_content
-    //   )
-    // }
-    // editor_state.editor_elements.editor.scrollTo(
-    //   0,
-    //   editor_state.editor_elements.editor.scrollHeight
-    // )
-    // updateDataView()
+
+    editor_state.editor_elements.editor.scrollTo(
+      0,
+      editor_state.editor_elements.editor.scrollHeight
+    )
   }
 
   function frameSelected(selected: HTMLTextAreaElement) {
@@ -890,11 +886,11 @@
     return new Uint8Array(buf).reduce((a, b) => a + (b < 128 ? 1 : 0), 0)
   }
 
-  // determine if the given character is undefined for latin-1 (ref: https://en.wikipedia.org/wiki/ISO/IEC_8859-1)
-  function latin1Undefined(c: string): boolean {
-    const char_code = c.charCodeAt(0)
-    return char_code < 32 || (char_code > 126 && char_code < 160)
-  }
+  // // determine if the given character is undefined for latin-1 (ref: https://en.wikipedia.org/wiki/ISO/IEC_8859-1)
+  // function latin1Undefined(c: string): boolean {
+  //   const char_code = c.charCodeAt(0)
+  //   return char_code < 32 || (char_code > 126 && char_code < 160)
+  // }
 
   function logicalDisplay(bytes: ArrayBuffer, bytes_per_row: number): string {
     const undefinedCharStandIn = '�'
@@ -1019,9 +1015,26 @@
         editor_state.editor_elements.file_type.innerHTML = msg.data.metrics.type;
         editor_state.editor_elements.file_byte_count.innerHTML = msg.data.metrics.size;
         editor_state.editor_elements.ascii_byte_count.innerHTML = msg.data.metrics.asciiCount;
+        editor_state.editor_elements.commit_button.disabled = false
+        editor_state.editor_elements.add_data_breakpoint_button.disabled = false
         break;
       case MessageCommand.editorChange:
         editor_state.editor_elements.editor.value = msg.data.display.editor;
+
+        editor_state.editor_elements.int64_dv.value = msg.data.display.dataView.int64
+        editor_state.editor_elements.uint64_dv.value = msg.data.display.dataView.uint64
+        editor_state.editor_elements.float64_dv.value = msg.data.display.dataView.float64
+        editor_state.editor_elements.int32_dv.value = msg.data.display.dataView.int32
+        editor_state.editor_elements.uint32_dv.value = msg.data.display.dataView.uint32
+        editor_state.editor_elements.float32_dv.value = msg.data.display.dataView.float32
+        editor_state.editor_elements.int16_dv.value = msg.data.display.dataView.int16
+        editor_state.editor_elements.uint16_dv.value = msg.data.display.dataView.uint16
+        editor_state.editor_elements.int8_dv.value = msg.data.display.dataView.int8
+        editor_state.editor_elements.uint8_dv.value = msg.data.display.dataView.uint8
+        editor_state.editor_elements.b8_dv.hidden = false
+        editor_state.editor_elements.b16_dv.hidden = false
+        editor_state.editor_elements.b32_dv.hidden = false
+        editor_state.editor_elements.b64_dv.hidden = false
         break;
       case MessageCommand.addressTypeChange:
         editor_state.editor_elements.address.innerHTML = msg.data.display.address;
@@ -1171,7 +1184,7 @@
           </div>
           <div class="grid-container-column">
             <div id="data_vw" hidden>
-              &nbsp;offset: <span id="offset_dv">-</span>
+              &nbsp;Offset: <span id="offset_dv">-</span>
               <span id="b8_dv">
                 <br /><label
                   >&nbsp;&nbsp;&nbsp;int8: <input id="int8_dv" /></label

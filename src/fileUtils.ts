@@ -1,3 +1,4 @@
+import { isDataView } from "util/types"
 
 export type AddressState = {
   start: number,
@@ -182,4 +183,21 @@ export function logicalDisplay(bytes: ArrayBuffer, logicalDisplay: LogicalDispla
     }
   }
   return result
+}
+
+export type DataView = {
+  int64: string,
+  uint64: string,
+  float64: string,
+  float32: string,
+  int32: string,
+  uint32: string,
+  int16: string,
+  uint16: string,
+  int8: string,
+  uint8: string,
+  b8: string
+  b16: string
+  b32: string
+  b64: string
 }
