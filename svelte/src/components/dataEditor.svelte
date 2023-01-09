@@ -4,11 +4,11 @@
   enum MessageCommand {
     commit,
     addBreakpoint,
-    processSelection,
     editorSelection,
     loadFile,
     addressTypeChange,
-    configUpdate
+    configUpdate,
+    editorChange
   }
 
  type AddressState = {
@@ -16,18 +16,24 @@
   end: number,
   stride: number,
   radix: number
-}
- type PhysicalDisplayState = {
-  radix: number,
-  bytesPerRow: number
-}
- type LogicalDisplayState = {
-  bytesPerRow: number
-}
- type OffsetState = {
-  radix: number,
-  spread: number
-}
+  }
+  type PhysicalDisplayState = {
+    radix: number,
+    bytesPerRow: number
+  }
+  type LogicalDisplayState = {
+    bytesPerRow: number
+  }
+  type OffsetState = {
+    radix: number,
+    spread: number
+  }
+  type EditorDisplayState = {
+    encoding: BufferEncoding,
+    start: number,
+    end: number,
+    cursor: number
+  }
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -320,8 +326,6 @@
     edit_encoding.addEventListener('change', () =>
       selectEditEncoding(edit_encoding.value)
     )
-    // const file_input = document.getElementById('file_input') as HTMLInputElement
-    // file_input.addEventListener('change', () => loadContent(file_input.files))
     const endianness = document.getElementById('endianness') as HTMLInputElement
     endianness.addEventListener('change', () =>
       selectEndianness(endianness.value)
@@ -538,10 +542,21 @@
 
   function selectEditEncoding(editEncoding: string) {
     editor_state.editor_controls.edit_encoding = editEncoding as BufferEncoding
-    refreshEditor()
     editor_state.editor_elements.editor.selectionStart =
       editor_state.editor_elements.editor.selectionEnd = 0
     storeCursorPos()
+
+    let editorMsg: EditorDisplayState = {
+      start: editor_state.editor_elements.editor.selectionStart,
+      end: editor_state.editor_elements.editor.selectionEnd,
+      cursor: editor_state.editor_controls.editor_cursor_pos,
+      encoding: editor_state.editor_controls.edit_encoding
+    }
+    vscode.postMessage({
+      command: MessageCommand.editorChange,
+      data: { editor: editorMsg }
+    })
+
     editor_state.editor_elements.editor.focus()
   }
 
@@ -560,30 +575,6 @@
       editor_state.editor_controls.radix = 2
       editor_state.editor_controls.bytes_per_row = 8
       editor_state.editor_elements.data_editor.classList.add('binary')
-      // if (editor_state.file_content) {
-      //   editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
-      //     editor_state.file_content,
-      //     editor_state.editor_controls.address_numbering,
-      //     editor_state.editor_controls.bytes_per_row
-      //   )
-      // }
-      // editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-      //   editor_state.editor_controls.address_numbering,
-      //   1
-      // )
-      // editor_state.editor_elements.address.innerHTML = makeAddressRange(
-      //   0,
-      //   Math.ceil(
-      //     editor_state.editor_elements.physical.innerHTML.length /
-      //       editor_state.editor_elements.physical.innerHTML.indexOf('\n')
-      //   ),
-      //   8,
-      //   10
-      // )
-      // editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-      //   editor_state.editor_controls.radix * -1,
-      //   1
-      // )
       addressState = {
         start: 0,
         end: parseInt(editor_state.editor_elements.file_byte_count.innerHTML) / editor_state.editor_controls.bytes_per_row ,
@@ -790,13 +781,11 @@
       selectionEnd = (selectionEnd + 1) / 2
     }
     editor_state.editor_elements.data_vw.hidden = false
+    editor_state.editor_elements.commit_button.hidden = false
+    editor_state.editor_elements.add_data_breakpoint_button.hidden = false
     editor_state.editor_controls.editor_cursor_pos = 0
     editor_state.editor_controls.offset = selectionStart
     editor_state.editor_controls.length = selectionStart - selectionEnd
-    // editor_state.edit_content = editor_state.file_content!.slice(
-    //   selectionStart,
-    //   selectionEnd
-    // )
     editor_state.editor_elements.editor.scrollTo(0, 0)
     editor_state.editor_elements.selected_offsets.innerHTML =
       selected.id +
@@ -809,15 +798,17 @@
     editor_state.editor_elements.data_view_offset.innerHTML =
       String(selectionStart)
     editor_state.editor_elements.editor_offsets.innerHTML = '-'
+    
+    let editorMsg: EditorDisplayState = {
+      start: selectionStart,
+      end: selectionEnd,
+      encoding: editor_state.editor_controls.edit_encoding,
+      cursor: editor_state.editor_controls.editor_cursor_pos
+    }
 
     vscode.postMessage({
-      command: MessageCommand.processSelection,
-      data: {
-        start: selectionStart,
-        end: selectionEnd,
-        encoding: editor_state.editor_controls.edit_encoding
-      }
-
+      command: MessageCommand.editorChange,
+      data: { editor: editorMsg }
     });
     // try {
     //   editor_state.editor_elements.editor.value = Buffer.from(
@@ -1029,8 +1020,8 @@
         editor_state.editor_elements.file_byte_count.innerHTML = msg.data.metrics.size;
         editor_state.editor_elements.ascii_byte_count.innerHTML = msg.data.metrics.asciiCount;
         break;
-      case MessageCommand.editorSelection:
-        editor_state.editor_elements.editor.value = msg.data.content;
+      case MessageCommand.editorChange:
+        editor_state.editor_elements.editor.value = msg.data.display.editor;
         break;
       case MessageCommand.addressTypeChange:
         editor_state.editor_elements.address.innerHTML = msg.data.display.address;

@@ -5,7 +5,8 @@ export enum MessageCommand {
     editorSelection,
     loadFile,
     addressTypeChange,
-    configUpdate
+    configUpdate,
+    editorChange
   }
 
 export type EditorMessage = { command: MessageCommand, data: Record<string, any> }

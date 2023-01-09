@@ -16,20 +16,27 @@ export type OffsetState = {
 export type LogicalDisplayState = {
   bytesPerRow: number
 }
-
+export type EditorDisplayState = {
+  encoding: BufferEncoding,
+  start: number,
+  end: number,
+  cursor: number
+}
 export class DisplayState {
     public address: AddressState
     public physicalOffset: OffsetState
     public physicalDisplay: PhysicalDisplayState
     public logicalOffset: OffsetState
     public logicalDisplay: LogicalDisplayState
-  
+    public editorDisplay: EditorDisplayState
+
   constructor(){
     this.address = { start: 0, end: 0, stride: 16, radix: 10 }
     this.physicalOffset = { radix: 10, spread: 2 }
     this.physicalDisplay = { radix: 16, bytesPerRow: 16 }
     this.logicalOffset = { radix: 10, spread: 1 }
     this.logicalDisplay = { bytesPerRow: 16 }
+    this.editorDisplay = { encoding: 'utf-8', start: 0, end: 0, cursor: 0 }
   }
   public updateAddressState(state: AddressState) {
     this.address = {
@@ -61,6 +68,12 @@ export class DisplayState {
     this.logicalDisplay = {
       bytesPerRow: state.bytesPerRow
     }
+  }
+  public updateEditorDisplayState(state: EditorDisplayState) {
+    this.editorDisplay = state
+  }
+  public updateEditorCurserPOS(pos: number) {
+    this.editorDisplay.cursor = pos;
   }
 }
 

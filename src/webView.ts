@@ -83,23 +83,13 @@ export class WebView implements vscode.Disposable {
 
   private messageReceiver(message: EditorMessage) {
     switch( message.command ) {
-      case MessageCommand.processSelection:
-        vscode.window.showInformationMessage( `Send index [${message.data.start}:${message.data.end}]` )
-        let start = message.data.start;
-        let end = message.data.end;
-
-        this.panel.webview.postMessage({
-          command: MessageCommand.editorSelection,
-          content: this.fileData.slice(start, end).toString(message.data.encoding)
-        });
-
-        break;
       case MessageCommand.addressTypeChange:
         this.displayState.updateAddressState(message.data.address);
         this.displayState.updatePhysicalDisplayState(message.data.physicalDisplay);
         this.displayState.updatePhysicalOffsetState(message.data.physicalOffset);
         this.displayState.updateLogicalOffsetState(message.data.logicalOffset);
         this.displayState.updateLogicalDisplayState(message.data.logicalDisplay); 
+
         this.panel.webview.postMessage({
           command: MessageCommand.addressTypeChange,
           display: {
@@ -110,6 +100,21 @@ export class WebView implements vscode.Disposable {
             logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay)
           }
         })
+        break;
+
+      case MessageCommand.editorChange:
+        this.displayState.updateEditorDisplayState(message.data.editor);
+        var data = this.fileData.slice(
+          this.displayState.editorDisplay.start, 
+          this.displayState.editorDisplay.end).toString(this.displayState.editorDisplay.encoding)
+
+        this.panel.webview.postMessage({
+          command: MessageCommand.editorChange,
+          display: {
+            editor: data
+          }
+        });
+        console.log(this.displayState, data);
         break;
     }
   }
