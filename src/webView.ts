@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
-import { DataView, encodeForDisplay, makeAddressRange, makeOffsetRange, logicalDisplay, DisplayState } from './fileUtils'
+import { logicalDisplay, DisplayState } from './fileUtils'
 import { EditorMessage, MessageCommand } from './messageHandler'
 
 /** Data editor message data structure for communication between Webview and VSCode. */
@@ -50,25 +50,19 @@ export class WebView implements vscode.Disposable {
       if (fileUri && fileUri[0]) {
         this.fileToEdit = fileUri[0].fsPath
       }
-      let data = fs.readFileSync(this.fileToEdit);
+      let data = fs.readFileSync(this.fileToEdit)
       this.fileData = Buffer.from(data);
-      
-      this.displayState.address.end = this.fileData.length / 16;
+      let msgData = new Uint8Array(data.toString(this.displayState.editorDisplay.encoding).split('').map((e)=>e.charCodeAt(0)))
+      console.log(msgData)
 
       this.panel.webview.postMessage({
         command: MessageCommand.loadFile,
         metrics: { 
           type: fs.statSync(this.fileToEdit).mode, 
           size: this.fileData.length, 
-          asciiCount: 0 
-        },
-        display: {
-          address: makeAddressRange(this.displayState.address),
-          physicalOffset: makeOffsetRange(this.displayState.physicalOffset),
-          physical: encodeForDisplay(this.fileData, this.displayState.physicalDisplay),
-          logicalOffset: makeOffsetRange(this.displayState.logicalOffset),
-          logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay)
-        }
+          asciiCount: 0 },
+        editor:   { fileData: msgData },
+        display:  { logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay) }        
       });
     })
 
@@ -82,60 +76,88 @@ export class WebView implements vscode.Disposable {
 
   private messageReceiver(message: EditorMessage) {
     switch( message.command ) {
-      case MessageCommand.addressTypeChange:
-        this.displayState.updateAddressState(message.data.address);
-        this.displayState.updatePhysicalDisplayState(message.data.physicalDisplay);
-        this.displayState.updatePhysicalOffsetState(message.data.physicalOffset);
-        this.displayState.updateLogicalOffsetState(message.data.logicalOffset);
-        this.displayState.updateLogicalDisplayState(message.data.logicalDisplay); 
+      // case MessageCommand.addressTypeChange:
+      //   this.displayState.updateAddressState(message.data.address);
+      //   this.displayState.updatePhysicalDisplayState(message.data.physicalDisplay);
+      //   this.displayState.updatePhysicalOffsetState(message.data.physicalOffset);
+      //   this.displayState.updateLogicalOffsetState(message.data.logicalOffset);
+      //   this.displayState.updateLogicalDisplayState(message.data.logicalDisplay); 
 
-        this.panel.webview.postMessage({
-          command: MessageCommand.addressTypeChange,
-          display: {
-            address: makeAddressRange(this.displayState.address),
-            physicalOffset: makeOffsetRange(this.displayState.physicalOffset),
-            physical: encodeForDisplay(this.fileData, this.displayState.physicalDisplay),
-            logicalOffset: makeOffsetRange(this.displayState.logicalOffset),
-            logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay)
-          }
-        })
-        break;
+      //   this.panel.webview.postMessage({
+      //     command: MessageCommand.addressTypeChange,
+      //     display: {
+      //       address: makeAddressRange(this.displayState.address),
+      //       physicalOffset: makeOffsetRange(this.displayState.physicalOffset),
+      //       physical: encodeForDisplay(this.fileData, this.displayState.physicalDisplay),
+      //       logicalOffset: makeOffsetRange(this.displayState.logicalOffset),
+      //       logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay)
+      //     }
+      //   })
+      //   break;
 
-      case MessageCommand.editorChange:
+      case MessageCommand.editorOnChange:
         this.displayState.updateEditorDisplayState(message.data.editor);
-        var data = this.fileData.slice(
-          this.displayState.editorDisplay.start, 
-          this.displayState.editorDisplay.end).toString(this.displayState.editorDisplay.encoding)
+        
+        var bufSlice: string = this.fileData
+        .slice(this.displayState.editorDisplay.start, this.displayState.editorDisplay.end)
+        .toString(message.data.editor.encoding)
+        // var bufSlice: string = Buffer.from(this.fileData, this.displayState.editorDisplay.start, this.displayState.editorDisplay.end)
+        // .toString(message.data.editor.encoding)
+
+        console.log(bufSlice)
 
         this.panel.webview.postMessage({
-          command: MessageCommand.editorChange,
-          display: {
-            editor: data,
-            dataView: this.populateDataView()
-          }
+          command: MessageCommand.editorOnChange,
+          display: { editor: bufSlice }
         });
         break;
+
+      // case MessageCommand.editorSelection:
+      //   this.displayState.editorDisplay.cursor = message.data.start
+      //   console.log(message.data)
+      //   this.panel.webview.postMessage({
+      //     command: MessageCommand.editorSelection,
+      //     display: {
+      //       dataView: this.populateDataView()
+      //     }
+      //   })
+      //   break;
     }
   }
-  private populateDataView(): DataView {
-    let pos = this.displayState.editorDisplay.cursor
-    let radix = this.displayState.physicalDisplay.radix
-    let ret: DataView = {
-      int64: this.fileData.readBigInt64LE(pos).toString(radix),
-      uint64: this.fileData.readBigUint64LE(pos).toString(radix),
-      float64: this.fileData.readFloatLE(pos).toString(radix),
-      float32: this.fileData.readFloatLE(pos).toString(radix),
-      int32: this.fileData.readInt32LE(pos).toString(radix),
-      uint32: this.fileData.readUint32LE(pos).toString(radix),
-      int16: this.fileData.readInt16LE(pos).toString(radix),
-      uint16: this.fileData.readUint16LE(pos).toString(radix),
-      int8: this.fileData.readInt8(pos).toString(radix),
-      uint8: this.fileData.readUInt8(pos).toString(radix),
-      b8: "",
-      b16: "",
-      b32: "",
-      b64: ""
-    }
-    return ret
-  }
+  // private populateDataView( start: number = this.displayState.editorDisplay.cursor, 
+  //                           end: number = start): DataView {
+  //   let radix = this.displayState.editorDisplay.radix
+  //   let ret: DataView = {
+  //     int64: "",
+  //     uint64: "",
+  //     float64: "", 
+  //     float32: "",
+  //     int32: "",
+  //     uint32: "",
+  //     int16: "",
+  //     uint16: "",
+  //     int8: this.fileData.readInt8(start).toString(radix),
+  //     uint8: this.fileData.readUInt8(start).toString(radix),
+  //     b8: "",
+  //     b16: "",
+  //     b32: "",
+  //     b64: ""
+  //   }
+
+  //   if( end - start > 0 ) {
+  //     ret.int16   = this.fileData.readInt16LE(start).toString(radix)
+  //     ret.uint16  = this.fileData.readUInt16LE(start).toString(radix)
+  //   }
+  //   if( end - start > 2 ) {
+  //     ret.int32   = this.fileData.readInt32LE(start).toString(radix)
+  //     ret.uint32  = this.fileData.readUInt32LE(start).toString(radix)
+  //     ret.float32 = this.fileData.readFloatLE(start).toString(radix)
+  //   }
+  //   if( end - start > 5 ) {
+  //     ret.int64 = this.fileData.readBigInt64LE(start).toString(radix)
+  //     ret.uint64 = this.fileData.readBigUInt64LE(start).toString(radix)
+  //     ret.float64 = this.fileData.readDoubleLE(start).toString(radix)
+  //   }
+  //   return ret
+  // }
 }

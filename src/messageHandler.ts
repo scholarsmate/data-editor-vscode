@@ -2,10 +2,10 @@ export enum MessageCommand {
   commit,
   addBreakpoint,
   editorSelection,
+  editorOnChange,
   loadFile,
   addressTypeChange,
   configUpdate,
-  editorChange
 }
 
 export type EditorMessage = { command: MessageCommand, data: Record<string, any> }
