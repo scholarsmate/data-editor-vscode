@@ -346,8 +346,30 @@
       editor_state.editor_elements.physical.scrollTop = line * line_height
     })
     editor_state.editor_elements.editor.addEventListener('change', ()=>{
-      // let editedLength = editor_state.editor_elements.editor.
-      document.getElementById('test').innerHTML = editor_state.editor_elements.editor.value
+      let commitMsg = {
+        offset: editor_state.editor_controls.offset,
+        length: 0,
+        data: null
+      }
+
+      switch(editor_state.editor_controls.edit_encoding){
+        case 'hex':
+          commitMsg.length = editor_state.editor_elements.editor.value.length / 2
+
+          // Disable commit button if length is not divisible by a byte.
+          editor_state.editor_elements.commit_button.disabled = (commitMsg.length % 2 === 0)
+        break;
+        default:
+          commitMsg.length = editor_state.editor_elements.editor.value.length
+      }
+      document.getElementById('test').innerHTML = "<h2>Info</h2><br><div>Length: " + commitMsg.length +"</div></br><div>Data: <br>"+editor_state.editor_elements.editor.value + "</div>"
+
+      // vscode.postMessage({
+      //   command: MessageCommand.commit,
+      //   data: {
+
+      //   }
+      // })
     })
     // Track the cursor position
     editor_state.editor_elements.editor.oninput =
@@ -358,6 +380,18 @@
       if (
         ['Arrow', 'Page', 'Home', 'End'].some((type) => key.startsWith(type))
       ) {
+        storeCursorPos()
+      }
+      else if (['Backspace', "Delete"].some((type)=> key.startsWith(type))){
+        editor_state.editor_controls.length--     
+        editor_state.editor_elements.selected_offsets.innerHTML =
+          'Selection: ' +
+          editor_state.editor_controls.editor_selection_start +
+          ' - ' +
+          (editor_state.editor_controls.editor_selection_start + editor_state.editor_controls.length )  +
+          ', length: ' +
+          editor_state.editor_controls.length
+        document.getElementById('test').innerHTML = "Removed data at: " + editor_state.editor_controls.editor_cursor_pos.toString()
         storeCursorPos()
       }
     }
