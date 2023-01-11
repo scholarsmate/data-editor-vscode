@@ -100,7 +100,6 @@
   }
 
   interface EditorState {
-    file: File | null
     file_content: Uint8Array | null
     edit_content: Uint8Array
     editor_controls: EditorControls
@@ -112,7 +111,6 @@
 
   function init() {
     editor_state = {
-      file: null,
       file_content: null,
       edit_content: new Uint8Array(0),
       editor_elements: {
@@ -347,6 +345,10 @@
         ) - 1
       editor_state.editor_elements.physical.scrollTop = line * line_height
     })
+    editor_state.editor_elements.editor.addEventListener('change', ()=>{
+      // let editedLength = editor_state.editor_elements.editor.
+      document.getElementById('test').innerHTML = editor_state.editor_elements.editor.value
+    })
     // Track the cursor position
     editor_state.editor_elements.editor.oninput =
       editor_state.editor_elements.editor.onclick =
@@ -492,7 +494,6 @@
     )
     editor_state.editor_elements.logical.innerHTML = 'Loading...'
     editor_state.file_content = fileData
-    // editor_state.editor_elements.file_type.innerHTML = editor_state.file!.type
     editor_state.editor_metrics.ascii_byte_count = countAscii(
       editor_state.file_content
     )
@@ -508,10 +509,6 @@
       editor_state.editor_controls.radix,
       editor_state.editor_controls.bytes_per_row
     )
-    // editor_state.editor_elements.logical.innerHTML = logicalDisplay(
-    //   editor_state.file_content,
-    //   editor_state.editor_controls.bytes_per_row
-    // )
     editor_state.editor_elements.commit_button.disabled = false
     editor_state.editor_elements.add_data_breakpoint_button.disabled = false
   }
@@ -1268,6 +1265,7 @@
     </fieldset>
   </div>
 </main>
+<div id='test'>.</div>
 
 <!-- svelte-ignore css-unused-selector -->
 <style lang="scss">
