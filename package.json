@@ -24,6 +24,7 @@
     ]
   },
   "scripts": {
+    "install:all": "npm install && cd svelte && npm install",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "concurrently --kill-others \"npm run watch:extension\" \"npm run watch:svelte\"",
@@ -56,7 +57,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "glob": "^8.0.3",
     "mocha": "^10.2.0",
-    "prettier": "^2.8.1",
+    "prettier": "^2.8.2",
     "ts-loader": "^9.2.5",
     "typescript": "^4.9.4",
     "webpack": "^5.52.1",

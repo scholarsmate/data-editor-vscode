@@ -10,7 +10,7 @@ import { EditorMessage, MessageCommand } from './messageHandler'
 export class WebView implements vscode.Disposable {
   private panel: vscode.WebviewPanel
   private svelteWebviewInitializer: SvelteWebviewInitializer
-  private fileToEdit: string = ""
+  private fileToEdit: string = ''
   private fileData: Buffer = Buffer.alloc(0)
   private displayState = new DisplayState()
 
