@@ -4,11 +4,8 @@
   enum MessageCommand {
     commit,
     addBreakpoint,
-    editorOnSelection,
     editorOnChange,
     loadFile,
-    addressTypeChange,
-    configUpdate,
   }
 
   type AddressState = {
@@ -216,7 +213,7 @@
         editor_state.editor_elements.int8_dv.valueAsNumber
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint8_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint8(
@@ -224,7 +221,7 @@
         editor_state.editor_elements.uint8_dv.valueAsNumber
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int16_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setInt16(
@@ -233,7 +230,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint16_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint16(
@@ -242,7 +239,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setInt32(
@@ -251,7 +248,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint32(
@@ -260,7 +257,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setBigInt64(
@@ -269,7 +266,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setBigUint64(
@@ -278,7 +275,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.float32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setFloat32(
@@ -287,7 +284,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.float64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setFloat64(
@@ -296,10 +293,18 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.commit_button.addEventListener('click', () => {
-      vscode.postMessage({command: "commit", data: "testdata"});
+      vscode.postMessage({
+        command: MessageCommand.commit, 
+        data: {
+          fileOffset: editor_state.editor_controls.offset,
+          dataLength: (-editor_state.editor_controls.length),
+          data: editor_state.editor_elements.editor.value,
+          encoding: editor_state.editor_controls.edit_encoding
+        }
+      });
     })
     editor_state.editor_elements.add_data_breakpoint_button.addEventListener('click', () => {
       vscode.postMessage({command: "set_break", data: "testdata"});
@@ -355,21 +360,17 @@
       switch(editor_state.editor_controls.edit_encoding){
         case 'hex':
           commitMsg.length = editor_state.editor_elements.editor.value.length / 2
-
-          // Disable commit button if length is not divisible by a byte.
-          editor_state.editor_elements.commit_button.disabled = (commitMsg.length % 2 === 0)
+          editor_state.editor_elements.selected_offsets.innerHTML =
+            'Selection: ' +
+            editor_state.editor_controls.offset +
+            ' - ' +
+            (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+            ', length: ' +
+            commitMsg.length
         break;
         default:
           commitMsg.length = editor_state.editor_elements.editor.value.length
       }
-      document.getElementById('test').innerHTML = "<h2>Info</h2><br><div>Length: " + commitMsg.length +"</div></br><div>Data: <br>"+editor_state.editor_elements.editor.value + "</div>"
-
-      // vscode.postMessage({
-      //   command: MessageCommand.commit,
-      //   data: {
-
-      //   }
-      // })
     })
     // Track the cursor position
     editor_state.editor_elements.editor.oninput =
@@ -383,15 +384,18 @@
         storeCursorPos()
       }
       else if (['Backspace', "Delete"].some((type)=> key.startsWith(type))){
-        editor_state.editor_controls.length--     
+        let len = ++editor_state.editor_controls.length
+        if(editor_state.editor_controls.edit_encoding === 'hex') {
+          editor_state.editor_elements.commit_button.disabled = ((editor_state.editor_elements.editor.value.length / 2) % 1 != 0)
+          len = Math.ceil( len / 2 )
+        }
         editor_state.editor_elements.selected_offsets.innerHTML =
           'Selection: ' +
-          editor_state.editor_controls.editor_selection_start +
+          editor_state.editor_controls.offset +
           ' - ' +
-          (editor_state.editor_controls.editor_selection_start + editor_state.editor_controls.length )  +
+          (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
           ', length: ' +
-          editor_state.editor_controls.length
-        document.getElementById('test').innerHTML = "Removed data at: " + editor_state.editor_controls.editor_cursor_pos.toString()
+          (-len)
         storeCursorPos()
       }
     }
@@ -468,27 +472,6 @@
           ', cursor: ' +
           String(editor_state.editor_controls.editor_cursor_pos)
 
-    // let editorMsg: EditorDisplayState = {
-    //   start: editor_state.editor_controls.offset,
-    //   end: editor_state.editor_controls.offset +(-editor_state.editor_controls.length),
-    //   cursor: editor_state.editor_controls.editor_cursor_pos,
-    //   encoding: editor_state.editor_controls.edit_encoding,
-    //   radix: parseInt(editor_state.editor_elements.radix.value)
-    // }
-    // vscode.postMessage({
-    //   command: MessageCommand.editorOnSelection,
-    //   data: {
-    //     start: editor_state.editor_elements.editor.selectionStart,
-    //     end: editor_state.editor_elements.editor.selectionEnd,
-    //     offset: editor_state.editor_controls.offset
-    //   }
-    // })
-
-    // console.log(editorMsg)
-    // vscode.postMessage({
-    //   command: MessageCommand.editorChange,
-    //   data: { editor: editorMsg }
-    // })
   }
 
   function selectEndianness(endianness: string) {
@@ -672,17 +655,6 @@
         bytesPerRow: 16
       }
     }
-
-    vscode.postMessage({
-      command: MessageCommand.addressTypeChange,
-      data: {
-        address: addressState,
-        physicalOffset: physicalOffsetState,
-        physicalDisplay: physicalDisplayState,
-        logicalOffset: logicalOffsetState,
-        logicalDisplay: logicalDisplayState
-      }
-    })
   }
 
   function updateDataView() {
@@ -867,57 +839,6 @@
     )
 
     updateDataView()
-    // let selectionStart = selected.selectionStart as number
-    // let selectionEnd = selected.selectionEnd as number
-
-    // if (selected.id === 'physical') {
-    //   if (editor_state.editor_controls.radix === 2) {
-    //     selectionStart = selectionStart / 9
-    //     selectionEnd = (selectionEnd - 8) / 9 + 1
-    //   } else {
-    //     selectionStart = selectionStart / 3
-    //     selectionEnd = (selectionEnd - 2) / 3 + 1
-    //   }
-    // } else {
-    //   selectionStart = selectionStart / 2
-    //   selectionEnd = (selectionEnd + 1) / 2
-    // }
-    // editor_state.editor_elements.data_vw.hidden = false
-    // editor_state.editor_elements.commit_button.hidden = false
-    // editor_state.editor_elements.add_data_breakpoint_button.hidden = false
-    // editor_state.editor_controls.editor_cursor_pos = 0
-    // editor_state.editor_controls.offset = selectionStart
-    // editor_state.editor_controls.length = selectionStart - selectionEnd
-    // editor_state.editor_elements.editor.scrollTo(0, 0)
-    // editor_state.editor_elements.selected_offsets.innerHTML =
-    //   selected.id +
-    //   ': ' +
-    //   selectionStart +
-    //   ' - ' +
-    //   selectionEnd +
-    //   ', length: ' +
-    //   (selectionEnd - selectionStart)
-    // editor_state.editor_elements.data_view_offset.innerHTML =
-    //   String(selectionStart)
-    // editor_state.editor_elements.editor_offsets.innerHTML = '-'
-
-    // let editorMsg: EditorDisplayState = {
-    //   start: selectionStart,
-    //   end: selectionEnd,
-    //   encoding: editor_state.editor_controls.edit_encoding,
-    //   cursor: editor_state.editor_controls.editor_cursor_pos,
-    //   radix: parseInt(editor_state.editor_elements.radix.value)
-    // }
-    // console.log(editorMsg)
-    // vscode.postMessage({
-    //   command: MessageCommand.editorChange,
-    //   data: { editor: editorMsg }
-    // });
-
-    // editor_state.editor_elements.editor.scrollTo(
-    //   0,
-    //   editor_state.editor_elements.editor.scrollHeight
-    // )
   }
 
   function frameSelected(selected: HTMLTextAreaElement) {
@@ -979,31 +900,6 @@
   }
 
   // // determine if the given character is undefined for latin-1 (ref: https://en.wikipedia.org/wiki/ISO/IEC_8859-1)
-  function latin1Undefined(c: string): boolean {
-    const char_code = c.charCodeAt(0)
-    return char_code < 32 || (char_code > 126 && char_code < 160)
-  }
-
-  // function logicalDisplay(bytes: ArrayBuffer, bytes_per_row: number): string {
-  //   const undefinedCharStandIn = '�'
-  //   let result = ''
-  //   if (bytes.byteLength > 0) {
-  //     const data = Buffer.from(bytes).toString('latin1').replaceAll('\n', ' ')
-  //     let i = 0
-  //     while (true) {
-  //       for (let col = 0; i < data.length && col < bytes_per_row; ++col) {
-  //         const c = data.charAt(i++)
-  //         result += (latin1Undefined(c) ? undefinedCharStandIn : c) + ' '
-  //       }
-  //       result = result.slice(0, result.length - 1)
-  //       if (i === data.length) {
-  //         break
-  //       }
-  //       result += '\n'
-  //     }
-  //   }
-  //   return result
-  // }
 
   function radixBytePad(radix: number): number {
     switch (radix) {
@@ -1105,30 +1001,6 @@
       case MessageCommand.editorOnChange:
         editor_state.editor_elements.editor.value = msg.data.display.editor;
         break;
-      case MessageCommand.addressTypeChange:
-        editor_state.editor_elements.address.innerHTML = msg.data.display.address;
-        editor_state.editor_elements.physical_offsets.innerHTML = msg.data.display.physicalOffset;
-        editor_state.editor_elements.physical.innerHTML = msg.data.display.physical;
-        editor_state.editor_elements.logical_offsets.innerHTML = msg.data.display.logicalOffset;
-        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical;
-        break;
-      case MessageCommand.editorOnSelection:
-        console.log(msg.data)
-        editor_state.editor_elements.int64_dv.value = msg.data.display.dataView.int64
-        editor_state.editor_elements.uint64_dv.value = msg.data.display.dataView.uint64
-        editor_state.editor_elements.float64_dv.value = msg.data.display.dataView.float64
-        editor_state.editor_elements.int32_dv.value = msg.data.display.dataView.int32
-        editor_state.editor_elements.uint32_dv.value = msg.data.display.dataView.uint32
-        editor_state.editor_elements.float32_dv.value = msg.data.display.dataView.float32
-        editor_state.editor_elements.int16_dv.value = msg.data.display.dataView.int16
-        editor_state.editor_elements.uint16_dv.value = msg.data.display.dataView.uint16
-        editor_state.editor_elements.int8_dv.value = msg.data.display.dataView.int8
-        editor_state.editor_elements.uint8_dv.value = msg.data.display.dataView.uint8
-        editor_state.editor_elements.b8_dv.hidden = false
-        editor_state.editor_elements.b16_dv.hidden = false
-        editor_state.editor_elements.b32_dv.hidden = false
-        editor_state.editor_elements.b64_dv.hidden = false
-        break;
     }
   })
 
@@ -1196,8 +1068,8 @@
   <div class="measure"><span id="logical_offsets" /></div>
   <div class="measure">
     <div>
-      <span id="selected_offsets">-</span><br />
-      <span id="editor_offsets">-</span>
+      <span id="selected_offsets"> </span>
+      <span id="editor_offsets"> </span>
     </div>
   </div>
   <textarea class="address_vw" id="address" readonly />
