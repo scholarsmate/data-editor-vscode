@@ -18,18 +18,20 @@ export class SvelteWebviewInitializer {
       this.getSvelteAppDistributionIndexJsUri(context, view)
     )
     const stylesUri = webView.asWebviewUri(this.getStylesUri(context))
+    const codiconsUri = webView.asWebviewUri(this.getCodeIconsUri(context))
     return `
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset='UTF-8'>
         <!--
-          Use a content security policy to only allow loading images from https or from our extension directory,
+          Use a content security policy to only allow loading images from the extension directory,
           and only allow scripts that have a specific nonce.
         -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webView.cspSource}; img-src ${webView.cspSource} https:; script-src 'nonce-${nonce}';">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webView.cspSource}; img-src ${webView.cspSource}; script-src 'nonce-${nonce}';">
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
         <link href="${stylesUri}" rel="stylesheet" type="text/css" />
+        <link href="${codiconsUri}" rel="stylesheet" type="text/css" />
     </head>
     <body>
     </body>
@@ -100,6 +102,17 @@ export class SvelteWebviewInitializer {
       'svelte',
       'dist',
       'styles.css'
+    )
+  }
+
+  private getCodeIconsUri(context: vscode.ExtensionContext): vscode.Uri {
+    return vscode.Uri.joinPath(
+      context.extensionUri,
+      'svelte',
+      'node_modules',
+      '@vscode/codicons',
+      'dist',
+      'codicon.css'
     )
   }
 }
