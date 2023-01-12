@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "@vscode/webview-ui-toolkit"  
+  import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "../../node_modules/@vscode/webview-ui-toolkit"  
   provideVSCodeDesignSystem().register(vsCodeButton(), vsCodeCheckbox(), vsCodeDropdown(), vsCodeOption(), vsCodeTextField())
   const vscode = acquireVsCodeApi()
 
@@ -8,24 +8,10 @@
     addBreakpoint,
     editorOnChange,
     loadFile,
-  }
-
-  type AddressState = {
-    start: number,
-    end: number,
-    stride: number,
-    radix: number
-  }
-  type PhysicalDisplayState = {
-    radix: number,
-    bytesPerRow: number
+    addressOnChange
   }
   type LogicalDisplayState = {
     bytesPerRow: number
-  }
-  type OffsetState = {
-    radix: number,
-    spread: number
   }
   type EditorDisplayState = {
     encoding: BufferEncoding,
@@ -78,6 +64,7 @@
     file_byte_count: HTMLElement
     ascii_byte_count: HTMLElement
     file_type: HTMLElement
+    file_name: HTMLElement
     file_metrics_vw: HTMLElement
     goto_offset: HTMLInputElement
     radix: HTMLInputElement
@@ -145,6 +132,7 @@
           'ascii_byte_cnt'
         ) as HTMLElement,
         file_type: document.getElementById('file_type') as HTMLElement,
+        file_name: document.getElementById('file_name') as HTMLElement,
         commit_button: document.getElementById(
           'commit_btn'
         ) as HTMLInputElement,
@@ -592,13 +580,8 @@
   }
 
   function selectAddressType(addressType: number) {
-    let addressState: AddressState
-    let physicalOffsetState: OffsetState
-    let physicalDisplayState: PhysicalDisplayState
-    let logicalOffsetState: OffsetState
-    let logicalDisplayState: LogicalDisplayState
-
     editor_state.editor_controls.address_numbering = addressType
+    let logicalDisplayState: LogicalDisplayState
     if (
       editor_state.editor_controls.address_numbering === 2 &&
       !editor_state.editor_elements.data_editor.classList.contains('binary')
@@ -606,24 +589,27 @@
       editor_state.editor_controls.radix = 2
       editor_state.editor_controls.bytes_per_row = 8
       editor_state.editor_elements.data_editor.classList.add('binary')
-      addressState = {
-        start: 0,
-        end: parseInt(editor_state.editor_elements.file_byte_count.innerHTML) / editor_state.editor_controls.bytes_per_row ,
-        stride: 8,
-        radix: 10
+      if (editor_state.file_content) {
+        editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
+          editor_state.file_content,
+          editor_state.editor_controls.address_numbering,
+          editor_state.editor_controls.bytes_per_row
+        )
       }
-      physicalOffsetState = {
-        radix: editor_state.editor_controls.address_numbering,
-        spread: 1
-      }
-      physicalDisplayState = {
-        radix: editor_state.editor_controls.address_numbering,
-        bytesPerRow: editor_state.editor_controls.bytes_per_row 
-      }
-      logicalOffsetState = { 
-        radix: editor_state.editor_controls.radix * -1,
-        spread: 1
-      }
+      editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
+        editor_state.editor_controls.address_numbering,
+        1
+      )
+      editor_state.editor_elements.address.innerHTML = makeAddressRange(
+        0,
+        Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
+        8,
+        10
+      )
+      editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
+        editor_state.editor_controls.radix * -1,
+        1
+      )
       logicalDisplayState = {
         bytesPerRow: 8
       }
@@ -635,28 +621,37 @@
       ) {
         editor_state.editor_elements.data_editor.classList.remove('binary')
       }
-      addressState = {
-        start: 0,
-        end: parseInt(editor_state.editor_elements.file_byte_count.innerHTML) / editor_state.editor_controls.bytes_per_row ,
-        stride: 16,
-        radix: editor_state.editor_controls.address_numbering
+      if (editor_state.file_content) {
+        editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
+          editor_state.file_content,
+          16,
+          editor_state.editor_controls.bytes_per_row
+        )
       }
-      physicalOffsetState = {
-        radix: editor_state.editor_controls.address_numbering,
-        spread: 2
-      }
-      physicalDisplayState = {
-        radix: 16,
-        bytesPerRow: editor_state.editor_controls.bytes_per_row 
-      }
-      logicalOffsetState = { 
-        radix: editor_state.editor_controls.address_numbering,
-        spread: 1
-      }
+      editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
+        editor_state.editor_controls.address_numbering,
+        2
+      )
+      editor_state.editor_elements.address.innerHTML = makeAddressRange(
+        0,
+        Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
+        16,
+        editor_state.editor_controls.address_numbering
+      )
+      editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
+        editor_state.editor_controls.address_numbering,
+        1
+      )
       logicalDisplayState = {
         bytesPerRow: 16
       }
     }
+    vscode.postMessage({
+      command: MessageCommand.addressOnChange,
+      data: {
+        state: logicalDisplayState
+      }
+    })
   }
 
   function updateDataView() {
@@ -975,8 +970,8 @@
           )
         case 2:
           return (
-            '00000000 00111111 11112222 22222233 33333333 44444444 44555555 55556666<br/>' +
-            '01234567 89012345 67890123 45678901 23456789 01234567 89012345 67890123'
+            '00000000 00111111 11112222 22222233 33333333 44444444 44555555 55556666  <br/>' +
+            '01234567 89012345 67890123 45678901 23456789 01234567 89012345 67890123  '
           )
         case -2:
           return '0 0 0 0 0 0 0 0 <br>' + '0 1 2 3 4 5 6 7'
@@ -998,10 +993,15 @@
     switch( msg.data.command ) {
       case MessageCommand.loadFile:
         loadContent(msg.data.editor.fileData)
+        editor_state.editor_elements.file_name.innerHTML = msg.data.metrics.filename
+        editor_state.editor_elements.file_type.innerHTML = msg.data.metrics.type
         editor_state.editor_elements.logical.innerHTML = msg.data.display.logical
         break
       case MessageCommand.editorOnChange:
         editor_state.editor_elements.editor.value = msg.data.display.editor
+        break
+      case MessageCommand.addressOnChange:
+        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical
         break
     }
   })
@@ -1016,20 +1016,21 @@
   <fieldset class="box">
     <legend>File Metrics</legend>
     <div id="file_metrics_vw">
+      File: <span id="file_name"> </span>
       <hr />
-      Type:<span id="file_type"> -</span>
+      Type:<span id="file_type"> </span>
       <br />Size: <span id="file_byte_cnt"> 0</span>
       <br />ASCII count: <span id="ascii_byte_cnt"> 0</span>
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>offset</legend>
+    <legend>Offset</legend>
     <div class="goto_offset">
       <input type="number" id="goto_offset" min="0" max="0" />
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>radix</legend>
+    <legend>Radix</legend>
     <div class="radix">
       <vscode-dropdown id="radix">
         <vscode-option value="2">BIN</vscode-option>
@@ -1040,10 +1041,10 @@
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>search</legend>
+    <legend>Search</legend>
     <div class="search">
       <vscode-text-field id="search">
-        search: 
+        Search: 
         <section slot="end" style="display:flex; align-items: center;">
           <vscode-button appearance="icon" aria-label="Case Sensitive">
             <span class="codicon codicon-preserve-case"></span>
@@ -1054,16 +1055,16 @@
         </section>
       </vscode-text-field>
       <vscode-text-field id="replace">
-        replace: 
+        Replace: 
       </vscode-text-field>
-      <br /><vscode-button id="search_btn"disabled>search</vscode-button>
-      <vscode-button id="replace_btn"disabled>replace</vscode-button>
+      <br /><vscode-button id="search_btn"disabled>Search</vscode-button>
+      <vscode-button id="replace_btn"disabled>Replace</vscode-button>
     </div>
   </fieldset>
   <fieldset class="box">
     <legend>misc</legend>
     <div class="misc">
-      <label for="advanced_mode">advanced mode
+      <label for="advanced_mode">Advanced Mode
         <vscode-checkbox id="advanced_mode" checked/>
       </label>
     </div>
@@ -1071,16 +1072,16 @@
 </header>
 
 <main class="dataEditor" id="data_editor">
-  <div class="hd">address</div>
-  <div class="hd">physical</div>
-  <div class="hd">logical</div>
-  <div class="hd">edit</div>
+  <div class="hd">Address</div>
+  <div class="hd">Physical</div>
+  <div class="hd">Logical</div>
+  <div class="hd">Edit</div>
   <div class="measure" style="align-items: center;">
     <vscode-dropdown class="address_type" id="address_numbering">
-      <vscode-option value="10">decimal</vscode-option>
-      <vscode-option value="16">hexadecimal</vscode-option>
-      <vscode-option value="8">octal</vscode-option>
-      <vscode-option value="2">binary</vscode-option>
+      <vscode-option value="10">Decimal</vscode-option>
+      <vscode-option value="16">Hexadecimal</vscode-option>
+      <vscode-option value="8">Octal</vscode-option>
+      <vscode-option value="2">Binary</vscode-option>
     </vscode-dropdown>
   </div>
   <div class="measure"><span id="physical_offsets" /></div>
@@ -1103,27 +1104,27 @@
           <div>
             <vscode-button id="commit_btn" disabled>commit changes</vscode-button>
             <br/>
-            committed changes: <span id="change_cnt">0</span>
+            Committed changes: <span id="change_cnt">0</span>
           </div>
           <div>
             <vscode-button id="add_data_breakpoint_btn" disabled>set breakpoint</vscode-button>
             <br/>
-            breakpoints: <span id="data_breakpoint_cnt">0</span>
+            Breakpoints: <span id="data_breakpoint_cnt">0</span>
           </div>
         </div>
         <hr />
         <div class="grid-container-two-columns">
           <div class="grid-container-column">
             <div>
-              <label for="endianness">endianness:
+              <label for="endianness">Endianness:
                 <vscode-dropdown id="endianness">
-                  <vscode-option value="le">little</vscode-option>
-                  <vscode-option value="be">big</vscode-option>
+                  <vscode-option value="le">Little</vscode-option>
+                  <vscode-option value="be">Big</vscode-option>
                 </vscode-dropdown>
               </label>
             </div>
             <div>
-              <label for="edit_encoding">encoding:
+              <label for="edit_encoding">Encoding:
                 <select id="edit_encoding">
                   <optgroup label="Binary Encodings">
                     <option value="hex">Hexadecimal</option>
@@ -1143,15 +1144,15 @@
               </label>
             </div>
             <div class="advanced">
-              <label for="lsb">least significant bit:
+              <label for="lsb">Least significant bit:
                 <vscode-dropdown id="lsb">
-                  <vscode-option value="h">higher offset</vscode-option>
-                  <vscode-option value="l">lower offset</vscode-option>
+                  <vscode-option value="h">Higher Offset</vscode-option>
+                  <vscode-option value="l">Lower Offset</vscode-option>
                 </vscode-dropdown>
               </label>
             </div>
             <div class="advanced">
-              <label for="logical_byte_size">logical byte size:
+              <label for="logical_byte_size">Logical byte size:
                 <vscode-dropdown id="logical_byte_size">
                   <vscode-option>8</vscode-option>
                   <vscode-option>7</vscode-option>
@@ -1188,7 +1189,6 @@
     </fieldset>
   </div>
 </main>
-<div id='test'>.</div>
 
 <!-- svelte-ignore css-unused-selector -->
 <style lang="scss">
@@ -1302,5 +1302,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-
+  #address_numbering {
+    min-width: 100%;
+  }
 </style>

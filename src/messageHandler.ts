@@ -20,6 +20,7 @@ export enum MessageCommand {
   addBreakpoint,
   editorOnChange,
   loadFile,
+  addressOnChange
 }
 
 export type EditorMessage = { command: MessageCommand, data: Record<string, any> }

@@ -70,14 +70,13 @@ export class WebView implements vscode.Disposable {
       let data = fs.readFileSync(this.fileToEdit)
       this.fileData = Buffer.from(data);
       let msgData = new Uint8Array(data.toString(this.displayState.editorDisplay.encoding).split('').map((e)=>e.charCodeAt(0)))
-      console.log(msgData)
 
       this.panel.webview.postMessage({
         command: MessageCommand.loadFile,
-        metrics: { 
-          type: fs.statSync(this.fileToEdit).mode, 
-          size: this.fileData.length, 
-          asciiCount: 0 },
+        metrics: {
+          filename: this.fileToEdit, 
+          type:     fs.statSync(this.fileToEdit).mode
+        },
         editor:   { fileData: msgData },
         display:  { logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay) }        
       });
@@ -93,7 +92,14 @@ export class WebView implements vscode.Disposable {
 
   private messageReceiver(message: EditorMessage) {
     switch( message.command ) {
-
+      case MessageCommand.addressOnChange:
+        this.displayState.updateLogicalDisplayState(message.data.state)
+        
+        this.panel.webview.postMessage({
+          command: MessageCommand.addressOnChange,
+          display: { logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay) }
+        })
+        break
       case MessageCommand.editorOnChange:
         this.displayState.updateEditorDisplayState(message.data.editor);
         
