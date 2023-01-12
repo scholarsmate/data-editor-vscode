@@ -784,7 +784,7 @@
     let selectionEnd = selected.selectionEnd as number
 
     if (selected.id === 'physical') {
-      if (editor_state.editor_controls.radix === 2) {
+      if (editor_state.editor_controls.radix === 2 && editor_state.editor_controls.address_numbering === 2) {
         selectionStart = selectionStart / 9
         selectionEnd = (selectionEnd - 8) / 9 + 1
       } else {
@@ -1189,7 +1189,6 @@
     </fieldset>
   </div>
 </main>
-
 <!-- svelte-ignore css-unused-selector -->
 <style lang="scss">
   /* CSS reset */
