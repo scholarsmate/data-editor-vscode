@@ -1,7 +1,7 @@
 <script lang="ts">
   import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "@vscode/webview-ui-toolkit"  
   provideVSCodeDesignSystem().register(vsCodeButton(), vsCodeCheckbox(), vsCodeDropdown(), vsCodeOption(), vsCodeTextField())
-  const vscode = acquireVsCodeApi();
+  const vscode = acquireVsCodeApi()
 
   enum MessageCommand {
     commit,
@@ -306,10 +306,10 @@
           data: editor_state.editor_elements.editor.value,
           encoding: editor_state.editor_controls.edit_encoding
         }
-      });
+      })
     })
     editor_state.editor_elements.add_data_breakpoint_button.addEventListener('click', () => {
-      vscode.postMessage({command: "set_break", data: "testdata"});
+      vscode.postMessage({command: "set_break", data: "testdata"})
     })
     
     const advanced_mode = document.getElementById(
@@ -369,7 +369,7 @@
             (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
             ', length: ' +
             commitMsg.length
-        break;
+        break
         default:
           commitMsg.length = editor_state.editor_elements.editor.value.length
       }
@@ -592,11 +592,11 @@
   }
 
   function selectAddressType(addressType: number) {
-    var addressState: AddressState;
-    var physicalOffsetState: OffsetState;
-    var physicalDisplayState: PhysicalDisplayState;
-    var logicalOffsetState: OffsetState;
-    var logicalDisplayState: LogicalDisplayState;
+    let addressState: AddressState
+    let physicalOffsetState: OffsetState
+    let physicalDisplayState: PhysicalDisplayState
+    let logicalOffsetState: OffsetState
+    let logicalDisplayState: LogicalDisplayState
 
     editor_state.editor_controls.address_numbering = addressType
     if (
@@ -833,7 +833,7 @@
     vscode.postMessage({
       command: MessageCommand.editorOnChange,
       data: { editor: editorMsg }
-    });
+    })
 
     editor_state.editor_elements.editor.scrollTo(
       0,
@@ -999,15 +999,15 @@
       case MessageCommand.loadFile:
         loadContent(msg.data.editor.fileData)
         editor_state.editor_elements.logical.innerHTML = msg.data.display.logical
-        break;
+        break
       case MessageCommand.editorOnChange:
-        editor_state.editor_elements.editor.value = msg.data.display.editor;
-        break;
+        editor_state.editor_elements.editor.value = msg.data.display.editor
+        break
     }
   })
 
   window.onload = () => {
-    init();
+    init()
   }
 
 </script>
