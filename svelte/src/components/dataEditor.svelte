@@ -461,7 +461,7 @@
           String(editor_state.editor_controls.editor_selection_end) +
           ', cursor: ' +
           String(editor_state.editor_controls.editor_cursor_pos)
-
+    updateDataView()
   }
 
   function selectEndianness(endianness: string) {
@@ -1033,10 +1033,10 @@
     <legend>Radix</legend>
     <div class="radix">
       <vscode-dropdown id="radix">
-        <vscode-option value="2">BIN</vscode-option>
+        <vscode-option value="10" selected>DEC</vscode-option>
+        <vscode-option value="16">HEX</vscode-option>
         <vscode-option value="8">OCT</vscode-option>
-        <vscode-option value="10">DEC</vscode-option>
-        <vscode-option value="16" selected>HEX</vscode-option>
+        <vscode-option value="2">BIN</vscode-option>
       </vscode-dropdown>
     </div>
   </fieldset>
