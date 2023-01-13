@@ -195,6 +195,8 @@
       editor_state.editor_controls.radix = parseInt(
         editor_state.editor_elements.radix.value
       )
+      selectAddressType(editor_state.editor_controls.radix)
+
       updateDataView()
     })
     editor_state.editor_elements.int8_dv.addEventListener('change', () => {
@@ -309,8 +311,16 @@
     const address_type = document.getElementById(
       'address_numbering'
     ) as HTMLInputElement
-    address_type.addEventListener('change', () =>
-      selectAddressType(parseInt(address_type.value))
+    address_type.addEventListener('change', () => {
+      editor_state.editor_controls.address_numbering = parseInt(address_type.value)
+      editor_state.editor_elements.address.innerHTML = makeAddressRange(
+          0,
+          Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
+          editor_state.editor_controls.bytes_per_row,
+          editor_state.editor_controls.address_numbering
+        )      
+    }
+
     )
     const edit_encoding = document.getElementById(
       'edit_encoding'
@@ -367,27 +377,53 @@
       editor_state.editor_elements.editor.onclick =
       editor_state.editor_elements.editor.oncontextmenu =
         storeCursorPos
-    editor_state.editor_elements.editor.onkeyup = ({ key }) => {
+    editor_state.editor_elements.editor.onkeyup = ( keyEvent ) => {
       if (
-        ['Arrow', 'Page', 'Home', 'End'].some((type) => key.startsWith(type))
+        ['Arrow', 'Page', 'Home', 'End'].some((type) => keyEvent.key.startsWith(type))
       ) {
         storeCursorPos()
       }
-      else if (['Backspace', "Delete"].some((type)=> key.startsWith(type))){
-        let len = ++editor_state.editor_controls.length
-        if(editor_state.editor_controls.edit_encoding === 'hex') {
-          editor_state.editor_elements.commit_button.disabled = ((editor_state.editor_elements.editor.value.length / 2) % 1 != 0)
-          len = Math.ceil( len / 2 )
-        }
-        editor_state.editor_elements.selected_offsets.innerHTML =
-          'Selection: ' +
-          editor_state.editor_controls.offset +
-          ' - ' +
-          (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
-          ', length: ' +
-          (-len)
-        storeCursorPos()
+      else {
+        keyEvent.preventDefault()
       }
+        // else if (['Backspace', "Delete"].some((type)=> key.startsWith(type))){
+        //   let len = editor_state.editor_elements.editor.value.length
+        //   if(editor_state.editor_controls.edit_encoding === 'hex') {
+        //     len = len / 2
+        //     editor_state.editor_elements.commit_button.disabled = (len % 1 != 0)
+        //     if( len % 1 != 0 ) { // Total length off by 1 nibble
+        //       ++editor_state.editor_controls.length
+        //     }
+        //   }
+        //   editor_state.editor_elements.selected_offsets.innerHTML =
+        //     'Edited: ' +
+        //     editor_state.editor_controls.offset +
+        //     ' - ' +
+        //     (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+        //     ', length: ' +
+        //     Math.ceil(len)
+        //   storeCursorPos()
+        //   updateDataView()
+        // }
+        let len = editor_state.editor_elements.editor.value.length
+        if(editor_state.editor_controls.edit_encoding != 'hex') {
+          len = len / 2
+        }
+        //   || (key.match(/^[0-9a-fA-F]*$/) && editor_state.editor_controls.edit_encoding === 'hex')){
+        //   --editor_state.editor_controls.length
+        // }
+        // else if( (!(key.match(/^[0-9a-fA-F]*$/)) && editor_state.editor_controls.edit_encoding === 'hex')) {
+        //   editor_state.editor_elements.editor.innerHTML = editor_state.editor_elements.editor.innerHTML.replace(/[^0-9a-fA-F]/g, "")
+        // }
+      editor_state.editor_elements.selected_offsets.innerHTML =
+        'Edited: ' +
+        editor_state.editor_controls.offset +
+        ' - ' +
+        (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+        ', length: ' +
+        Math.ceil(len)
+      updateDataView()
+      
     }
     // Lock the address, physical and logical views scrollbars together
     let currentScrollEvt: string | null, scrollSyncTimer: NodeJS.Timeout
@@ -579,32 +615,33 @@
     editor_state.editor_elements.editor.focus()
   }
 
-  function selectAddressType(addressType: number) {
-    editor_state.editor_controls.address_numbering = addressType
+  function selectAddressType(radix: number) {
+
+    editor_state.editor_controls.radix = radix
     let logicalDisplayState: LogicalDisplayState
     if (
-      editor_state.editor_controls.address_numbering === 2 &&
+      editor_state.editor_controls.radix === 2 &&
       !editor_state.editor_elements.data_editor.classList.contains('binary')
     ) {
-      editor_state.editor_controls.radix = 2
+      // editor_state.editor_controls.radix = 2
       editor_state.editor_controls.bytes_per_row = 8
       editor_state.editor_elements.data_editor.classList.add('binary')
       if (editor_state.file_content) {
         editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
           editor_state.file_content,
-          editor_state.editor_controls.address_numbering,
+          editor_state.editor_controls.radix,
           editor_state.editor_controls.bytes_per_row
         )
       }
       editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
+        editor_state.editor_controls.radix,
         1
       )
       editor_state.editor_elements.address.innerHTML = makeAddressRange(
         0,
         Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
         8,
-        10
+        editor_state.editor_controls.address_numbering
       )
       editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
         editor_state.editor_controls.radix * -1,
@@ -629,7 +666,7 @@
         )
       }
       editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
+        editor_state.editor_controls.radix,
         2
       )
       editor_state.editor_elements.address.innerHTML = makeAddressRange(
@@ -639,7 +676,7 @@
         editor_state.editor_controls.address_numbering
       )
       editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
+        editor_state.editor_controls.radix,
         1
       )
       logicalDisplayState = {
@@ -655,7 +692,11 @@
   }
 
   function updateDataView() {
-    const offset = editor_state.editor_controls.editor_cursor_pos
+    let bytePOS: number
+    (editor_state.editor_controls.edit_encoding === 'hex')
+      ? bytePOS = Math.ceil((editor_state.editor_controls.editor_cursor_pos-1) / 2)
+      : bytePOS = editor_state.editor_controls.editor_cursor_pos
+    const offset = bytePOS.valueOf()
     const data_view = new DataView(editor_state.edit_content.buffer)
     const little_endian = editor_state.editor_controls.little_endian
     const radix = editor_state.editor_controls.radix
@@ -1081,7 +1122,7 @@
       <vscode-option value="10">Decimal</vscode-option>
       <vscode-option value="16">Hexadecimal</vscode-option>
       <vscode-option value="8">Octal</vscode-option>
-      <vscode-option value="2">Binary</vscode-option>
+      <!-- <vscode-option value="2">Binary</vscode-option> -->
     </vscode-dropdown>
   </div>
   <div class="measure"><span id="physical_offsets" /></div>
@@ -1096,7 +1137,7 @@
   <textarea class="physical_vw" id="physical" readonly />
   <textarea class="logicalView" id="logical" readonly />
   <div class="editView" id="edit_view">
-    <textarea class="selectedContent" id="editor" />
+    <textarea class="selectedContent" id="editor" readonly/>
     <fieldset class="box">
       <legend>content controls</legend>
       <div class="contentControls" id="content_controls">
