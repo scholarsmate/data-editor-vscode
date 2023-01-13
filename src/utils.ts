@@ -70,3 +70,33 @@ export function logicalDisplay(bytes: ArrayBuffer, logicalDisplay: LogicalDispla
   }
   return result
 }
+type Mimes = {
+  [key:string]: number[]
+}
+const mimeTypes = {
+  "PNG": [0x89, 0x50, 0x4E, 0x47],
+  "JPEG": [0xFF, 0xD8, 0xFF, 0xE0],
+  "PDF": [0x25, 0x50, 0x44, 0x46],
+  "HTML": [0x3C, 0x21, 0x44, 0x4F, 0x43],
+  "MP3": [0x49, 0x44, 0x33],
+  "MP4": [0x00, 0x00, 0x00, 0x18],
+  "ZIP": [0x50, 0x4B, 0x03, 0x04],
+  "CSV": [0xEF, 0xBB, 0xBF],
+  "DOCX": [0x50, 0x4B, 0x03, 0x04],
+  "XLSX": [0x50, 0x4B, 0x03, 0x04]
+} as Mimes
+
+export function checkMimeType(bytes: number[], filename: string): string {
+  let ret: string
+  for (const key in mimeTypes) {
+      if (mimeTypes[key].toString() === bytes.toString()) {
+          ret = key
+          return ret;
+      }
+  }
+  (filename.lastIndexOf('.') > 0)
+    ? ret = filename.substring(filename.lastIndexOf('.'))
+    : ret = "unknown/binary"
+
+  return ret
+}

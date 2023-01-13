@@ -18,7 +18,7 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { SvelteWebviewInitializer } from './svelteWebviewInitializer'
-import { logicalDisplay, DisplayState } from './utils'
+import { logicalDisplay, DisplayState, checkMimeType } from './utils'
 import { EditorMessage, MessageCommand } from './messageHandler'
 
 /** Data editor message data structure for communication between Webview and VSCode. */
@@ -68,6 +68,8 @@ export class WebView implements vscode.Disposable {
         this.fileToEdit = fileUri[0].fsPath
       }
       let data = fs.readFileSync(this.fileToEdit)
+      let mimeData: number[] = Array.from(data.slice(0, 4))
+
       this.fileData = Buffer.from(data);
       let msgData = new Uint8Array(data.toString(this.displayState.editorDisplay.encoding).split('').map((e)=>e.charCodeAt(0)))
 
@@ -75,7 +77,7 @@ export class WebView implements vscode.Disposable {
         command: MessageCommand.loadFile,
         metrics: {
           filename: this.fileToEdit, 
-          type:     fs.statSync(this.fileToEdit).mode
+          type:     checkMimeType(mimeData, this.fileToEdit)
         },
         editor:   { fileData: msgData },
         display:  { logical: logicalDisplay(this.fileData, this.displayState.logicalDisplay) }        
