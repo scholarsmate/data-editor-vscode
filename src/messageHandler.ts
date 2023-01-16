@@ -15,19 +15,12 @@
  * limitations under the License.
  */
 
-import * as vscode from 'vscode'
-import { WebView } from './webView'
-
-export function activate(context: vscode.ExtensionContext) {
-  context.subscriptions.push(
-    vscode.commands.registerCommand('dataEditor.edit', () => {
-      const webView = new WebView(context, 'dataEditor', 'Data Editor')
-      webView.show()
-    })
-  )
+export enum MessageCommand {
+  commit,
+  addBreakpoint,
+  editorOnChange,
+  loadFile,
+  addressOnChange
 }
 
-// this method is called when your extension is deactivated
-export function deactivate(): void {
-  // do nothing
-}
+export type EditorMessage = { command: MessageCommand, data: Record<string, any> }

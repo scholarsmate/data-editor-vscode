@@ -1,8 +1,25 @@
 <script lang="ts">
-  import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "@vscode/webview-ui-toolkit"  
+  import { provideVSCodeDesignSystem, vsCodeButton, vsCodeCheckbox, vsCodeDropdown, vsCodeOption, vsCodeTextField } from "../../node_modules/@vscode/webview-ui-toolkit"  
   provideVSCodeDesignSystem().register(vsCodeButton(), vsCodeCheckbox(), vsCodeDropdown(), vsCodeOption(), vsCodeTextField())
-  const vscode = acquireVsCodeApi();
-  
+  const vscode = acquireVsCodeApi()
+
+  enum MessageCommand {
+    commit,
+    addBreakpoint,
+    editorOnChange,
+    loadFile,
+    addressOnChange
+  }
+  type LogicalDisplayState = {
+    bytesPerRow: number
+  }
+  type EditorDisplayState = {
+    encoding: BufferEncoding,
+    start: number,
+    end: number,
+    cursor: number,
+    radix: number
+  }
   interface EditorControls {
     bytes_per_line: number
     address_numbering: number
@@ -47,6 +64,7 @@
     file_byte_count: HTMLElement
     ascii_byte_count: HTMLElement
     file_type: HTMLElement
+    file_name: HTMLElement
     file_metrics_vw: HTMLElement
     goto_offset: HTMLInputElement
     radix: HTMLInputElement
@@ -68,7 +86,6 @@
   }
 
   interface EditorState {
-    file: File | null
     file_content: Uint8Array | null
     edit_content: Uint8Array
     editor_controls: EditorControls
@@ -80,7 +97,6 @@
 
   function init() {
     editor_state = {
-      file: null,
       file_content: null,
       edit_content: new Uint8Array(0),
       editor_elements: {
@@ -116,6 +132,7 @@
           'ascii_byte_cnt'
         ) as HTMLElement,
         file_type: document.getElementById('file_type') as HTMLElement,
+        file_name: document.getElementById('file_name') as HTMLElement,
         commit_button: document.getElementById(
           'commit_btn'
         ) as HTMLInputElement,
@@ -178,6 +195,8 @@
       editor_state.editor_controls.radix = parseInt(
         editor_state.editor_elements.radix.value
       )
+      selectAddressType(editor_state.editor_controls.radix)
+
       updateDataView()
     })
     editor_state.editor_elements.int8_dv.addEventListener('change', () => {
@@ -186,7 +205,7 @@
         editor_state.editor_elements.int8_dv.valueAsNumber
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint8_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint8(
@@ -194,7 +213,7 @@
         editor_state.editor_elements.uint8_dv.valueAsNumber
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int16_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setInt16(
@@ -203,7 +222,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint16_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint16(
@@ -212,7 +231,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setInt32(
@@ -221,7 +240,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setUint32(
@@ -230,7 +249,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.int64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setBigInt64(
@@ -239,7 +258,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.uint64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setBigUint64(
@@ -248,7 +267,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.float32_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setFloat32(
@@ -257,7 +276,7 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.float64_dv.addEventListener('change', () => {
       new DataView(editor_state.edit_content.buffer).setFloat64(
@@ -266,13 +285,21 @@
         editor_state.editor_controls.little_endian
       )
       updateDataView()
-      refreshEditor()
+      // refreshEditor()
     })
     editor_state.editor_elements.commit_button.addEventListener('click', () => {
-      vscode.postMessage({command: "commit", data: "testdata"});
+      vscode.postMessage({
+        command: MessageCommand.commit, 
+        data: {
+          fileOffset: editor_state.editor_controls.offset,
+          dataLength: (-editor_state.editor_controls.length),
+          data: editor_state.editor_elements.editor.value,
+          encoding: editor_state.editor_controls.edit_encoding
+        }
+      })
     })
     editor_state.editor_elements.add_data_breakpoint_button.addEventListener('click', () => {
-      vscode.postMessage({command: "set_break", data: "testdata"});
+      vscode.postMessage({command: "set_break", data: "testdata"})
     })
     
     const advanced_mode = document.getElementById(
@@ -284,8 +311,16 @@
     const address_type = document.getElementById(
       'address_numbering'
     ) as HTMLInputElement
-    address_type.addEventListener('change', () =>
-      selectAddressType(parseInt(address_type.value))
+    address_type.addEventListener('change', () => {
+      editor_state.editor_controls.address_numbering = parseInt(address_type.value)
+      editor_state.editor_elements.address.innerHTML = makeAddressRange(
+          0,
+          Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
+          editor_state.editor_controls.bytes_per_row,
+          editor_state.editor_controls.address_numbering
+        )      
+    }
+
     )
     const edit_encoding = document.getElementById(
       'edit_encoding'
@@ -295,8 +330,6 @@
     edit_encoding.addEventListener('change', () =>
       selectEditEncoding(edit_encoding.value)
     )
-    const file_input = document.getElementById('file_input') as HTMLInputElement
-    file_input.addEventListener('change', () => loadContent(file_input.files))
     const endianness = document.getElementById('endianness') as HTMLInputElement
     endianness.addEventListener('change', () =>
       selectEndianness(endianness.value)
@@ -317,17 +350,80 @@
         ) - 1
       editor_state.editor_elements.physical.scrollTop = line * line_height
     })
+    editor_state.editor_elements.editor.addEventListener('change', ()=>{
+      let commitMsg = {
+        offset: editor_state.editor_controls.offset,
+        length: 0,
+        data: null
+      }
+
+      switch(editor_state.editor_controls.edit_encoding){
+        case 'hex':
+          commitMsg.length = editor_state.editor_elements.editor.value.length / 2
+          editor_state.editor_elements.selected_offsets.innerHTML =
+            'Selection: ' +
+            editor_state.editor_controls.offset +
+            ' - ' +
+            (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+            ', length: ' +
+            commitMsg.length
+        break
+        default:
+          commitMsg.length = editor_state.editor_elements.editor.value.length
+      }
+    })
     // Track the cursor position
     editor_state.editor_elements.editor.oninput =
       editor_state.editor_elements.editor.onclick =
       editor_state.editor_elements.editor.oncontextmenu =
         storeCursorPos
-    editor_state.editor_elements.editor.onkeyup = ({ key }) => {
+    editor_state.editor_elements.editor.onkeyup = ( keyEvent ) => {
       if (
-        ['Arrow', 'Page', 'Home', 'End'].some((type) => key.startsWith(type))
+        ['Arrow', 'Page', 'Home', 'End'].some((type) => keyEvent.key.startsWith(type))
       ) {
         storeCursorPos()
       }
+      else {
+        keyEvent.preventDefault()
+      }
+        // else if (['Backspace', "Delete"].some((type)=> key.startsWith(type))){
+        //   let len = editor_state.editor_elements.editor.value.length
+        //   if(editor_state.editor_controls.edit_encoding === 'hex') {
+        //     len = len / 2
+        //     editor_state.editor_elements.commit_button.disabled = (len % 1 != 0)
+        //     if( len % 1 != 0 ) { // Total length off by 1 nibble
+        //       ++editor_state.editor_controls.length
+        //     }
+        //   }
+        //   editor_state.editor_elements.selected_offsets.innerHTML =
+        //     'Edited: ' +
+        //     editor_state.editor_controls.offset +
+        //     ' - ' +
+        //     (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+        //     ', length: ' +
+        //     Math.ceil(len)
+        //   storeCursorPos()
+        //   updateDataView()
+        // }
+        let len = editor_state.editor_elements.editor.value.length
+        if(editor_state.editor_controls.edit_encoding != 'hex') {
+          len = len / 2
+        }
+        //   || (key.match(/^[0-9a-fA-F]*$/) && editor_state.editor_controls.edit_encoding === 'hex')){
+        //   --editor_state.editor_controls.length
+        // }
+        // else if( (!(key.match(/^[0-9a-fA-F]*$/)) && editor_state.editor_controls.edit_encoding === 'hex')) {
+        //   editor_state.editor_elements.editor.innerHTML = editor_state.editor_elements.editor.innerHTML.replace(/[^0-9a-fA-F]/g, "")
+        // }
+      editor_state.editor_elements.selected_offsets.innerHTML =
+        'Edited: ' +
+        editor_state.editor_controls.offset +
+        ' - ' +
+        (editor_state.editor_controls.offset + (-editor_state.editor_controls.length) )  +
+        ', length: ' +
+        Math.ceil(len)
+      updateDataView()
+      
     }
     // Lock the address, physical and logical views scrollbars together
     let currentScrollEvt: string | null, scrollSyncTimer: NodeJS.Timeout
@@ -386,7 +482,7 @@
 
   function storeCursorPos() {
     editor_state.editor_controls.editor_cursor_pos =
-      editor_state.editor_elements.editor.selectionStart
+      editor_state.editor_elements.editor.selectionStart 
     editor_state.editor_controls.editor_selection_start =
       editor_state.editor_elements.editor.selectionStart
     editor_state.editor_controls.editor_selection_end =
@@ -414,64 +510,50 @@
     )
   }
 
-  async function loadContent(files: FileList | null) {
-    if (files) {
-      editor_state.file = files[0] as File
-      editor_state.editor_elements.editor.value = ''
-      editor_state.editor_elements.commit_button.disabled = false
-      editor_state.editor_elements.add_data_breakpoint_button.disabled = false
-      editor_state.editor_metrics.file_byte_count = editor_state.file.size
-      editor_state.editor_controls.goto_offset = 0
-      editor_state.editor_elements.goto_offset.max = String(
-        editor_state.file.size
-      )
-      editor_state.editor_elements.goto_offset.value = '0'
-      editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-        10,
-        1
-      )
-      editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        10,
-        2
-      )
-      editor_state.editor_elements.address.innerHTML = makeAddressRange(
-        0,
-        Math.ceil(editor_state.file.size / 16),
-        16,
-        editor_state.editor_controls.address_numbering
-      )
-      editor_state.editor_elements.file_byte_count.innerHTML = String(
-        editor_state.editor_metrics.file_byte_count
-      )
-      editor_state.editor_elements.logical.innerHTML = 'Loading...'
-      editor_state.file_content = new Uint8Array(
-        await readFile(editor_state.file)
-      )
-      editor_state.editor_elements.file_type.innerHTML = editor_state.file!.type
-      editor_state.editor_metrics.ascii_byte_count = countAscii(
-        editor_state.file_content
-      )
-      editor_state.editor_elements.ascii_byte_count.innerHTML = String(
-        editor_state.editor_metrics.ascii_byte_count
-      )
-      editor_state.editor_metrics.row_count = Math.ceil(
-        editor_state.file!.size / editor_state.editor_controls.bytes_per_row
-      )
-      editor_state.editor_elements.file_metrics_vw.hidden = false
-      editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
-        editor_state.file_content,
-        editor_state.editor_controls.radix,
-        editor_state.editor_controls.bytes_per_row
-      )
-      editor_state.editor_elements.logical.innerHTML = logicalDisplay(
-        editor_state.file_content,
-        editor_state.editor_controls.bytes_per_row
-      )
-    }
-  }
-
-  function readFile(file: File): Promise<ArrayBuffer> {
-    return new Response(file).arrayBuffer()
+  async function loadContent(fileData: Uint8Array) {
+    editor_state.editor_elements.editor.value = ''
+    editor_state.editor_metrics.file_byte_count = fileData.length
+    editor_state.editor_controls.goto_offset = 0
+    editor_state.editor_elements.goto_offset.max = String(
+      fileData.length
+    )
+    editor_state.editor_elements.goto_offset.value = '0'
+    editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
+      10,
+      1
+    )
+    editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
+      10,
+      2
+    )
+    editor_state.editor_elements.address.innerHTML = makeAddressRange(
+      0,
+      Math.ceil(fileData.length / 16),
+      16,
+      editor_state.editor_controls.address_numbering
+    )
+    editor_state.editor_elements.file_byte_count.innerHTML = String(
+      editor_state.editor_metrics.file_byte_count
+    )
+    editor_state.editor_elements.logical.innerHTML = 'Loading...'
+    editor_state.file_content = fileData
+    editor_state.editor_metrics.ascii_byte_count = countAscii(
+      editor_state.file_content
+    )
+    editor_state.editor_elements.ascii_byte_count.innerHTML = String(
+      editor_state.editor_metrics.ascii_byte_count
+    )
+    editor_state.editor_metrics.row_count = Math.ceil(
+      editor_state.file_content.length / editor_state.editor_controls.bytes_per_row
+    )
+    editor_state.editor_elements.file_metrics_vw.hidden = false
+    editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
+      editor_state.file_content,
+      editor_state.editor_controls.radix,
+      editor_state.editor_controls.bytes_per_row
+    )
+    editor_state.editor_elements.commit_button.disabled = false
+    editor_state.editor_elements.add_data_breakpoint_button.disabled = false
   }
 
   function syncScroll(from: HTMLElement, to: HTMLElement) {
@@ -513,47 +595,67 @@
 
   function selectEditEncoding(editEncoding: string) {
     editor_state.editor_controls.edit_encoding = editEncoding as BufferEncoding
-    refreshEditor()
     editor_state.editor_elements.editor.selectionStart =
       editor_state.editor_elements.editor.selectionEnd = 0
     storeCursorPos()
+
+    let editorMsg: EditorDisplayState = {
+      start: editor_state.editor_controls.offset,
+      end: editor_state.editor_controls.offset +(-editor_state.editor_controls.length),
+      cursor: editor_state.editor_controls.editor_cursor_pos,
+      encoding: editor_state.editor_controls.edit_encoding,
+      radix: editor_state.editor_controls.radix
+    }
+    console.log(editorMsg)
+    vscode.postMessage({
+      command: MessageCommand.editorOnChange,
+      data: { editor: editorMsg }
+    })
+
     editor_state.editor_elements.editor.focus()
   }
 
-  function selectAddressType(addressType: number) {
-    editor_state.editor_controls.address_numbering = addressType
+  function selectAddressType(radix: number) {
+
+    editor_state.editor_controls.radix = radix
+    let logicalDisplayState: LogicalDisplayState
     if (
-      editor_state.editor_controls.address_numbering === 2 &&
+      editor_state.editor_controls.radix === 2 &&
       !editor_state.editor_elements.data_editor.classList.contains('binary')
     ) {
-      editor_state.editor_controls.radix = 2
+      // editor_state.editor_controls.radix = 2
       editor_state.editor_controls.bytes_per_row = 8
       editor_state.editor_elements.data_editor.classList.add('binary')
       if (editor_state.file_content) {
         editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
           editor_state.file_content,
-          editor_state.editor_controls.address_numbering,
+          editor_state.editor_controls.radix,
           editor_state.editor_controls.bytes_per_row
         )
       }
       editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
+        editor_state.editor_controls.radix,
         1
       )
       editor_state.editor_elements.address.innerHTML = makeAddressRange(
         0,
-        Math.ceil(
-          editor_state.editor_elements.physical.innerHTML.length /
-            editor_state.editor_elements.physical.innerHTML.indexOf('\n')
-        ),
+        Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
         8,
-        10
+        editor_state.editor_controls.address_numbering
       )
       editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
         editor_state.editor_controls.radix * -1,
         1
       )
+      logicalDisplayState = {
+        bytesPerRow: 8
+      }
+
     } else {
+      let pysichalOffsetSpread: number
+      (editor_state.editor_controls.radix === 16)
+        ? pysichalOffsetSpread = 2
+        : pysichalOffsetSpread = 3
       editor_state.editor_controls.bytes_per_row = 16
       if (
         editor_state.editor_elements.data_editor.classList.contains('binary')
@@ -563,32 +665,44 @@
       if (editor_state.file_content) {
         editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
           editor_state.file_content,
-          16,
+          editor_state.editor_controls.radix,
           editor_state.editor_controls.bytes_per_row
         )
       }
+      
       editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
-        2
+        editor_state.editor_controls.radix,
+        pysichalOffsetSpread
       )
+
       editor_state.editor_elements.address.innerHTML = makeAddressRange(
         0,
-        Math.ceil(
-          editor_state.editor_elements.physical.innerHTML.length /
-            editor_state.editor_elements.physical.innerHTML.indexOf('\n')
-        ),
+        Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
         16,
         editor_state.editor_controls.address_numbering
       )
       editor_state.editor_elements.logical_offsets.innerHTML = makeOffsetRange(
-        editor_state.editor_controls.address_numbering,
+        editor_state.editor_controls.radix,
         1
       )
+      logicalDisplayState = {
+        bytesPerRow: 16
+      }
     }
+    vscode.postMessage({
+      command: MessageCommand.addressOnChange,
+      data: {
+        state: logicalDisplayState
+      }
+    })
   }
 
   function updateDataView() {
-    const offset = editor_state.editor_controls.editor_cursor_pos
+    let bytePOS: number
+    (editor_state.editor_controls.edit_encoding === 'hex')
+      ? bytePOS = Math.ceil((editor_state.editor_controls.editor_cursor_pos-1) / 2)
+      : bytePOS = editor_state.editor_controls.editor_cursor_pos
+    const offset = bytePOS.valueOf()
     const data_view = new DataView(editor_state.edit_content.buffer)
     const little_endian = editor_state.editor_controls.little_endian
     const radix = editor_state.editor_controls.radix
@@ -717,7 +831,7 @@
     let selectionEnd = selected.selectionEnd as number
 
     if (selected.id === 'physical') {
-      if (editor_state.editor_controls.radix === 2) {
+      if (editor_state.editor_controls.radix === 2 && editor_state.editor_controls.address_numbering === 2) {
         selectionStart = selectionStart / 9
         selectionEnd = (selectionEnd - 8) / 9 + 1
       } else {
@@ -748,25 +862,26 @@
     editor_state.editor_elements.data_view_offset.innerHTML =
       String(selectionStart)
     editor_state.editor_elements.editor_offsets.innerHTML = '-'
-    try {
-      editor_state.editor_elements.editor.value = Buffer.from(
-        editor_state.edit_content
-      ).toString(editor_state.editor_controls.edit_encoding)
-    } catch (e) {
-      console.error(
-        'decoding into ' +
-          editor_state.editor_controls.edit_encoding +
-          ' failed: ' +
-          e
-      )
-      editor_state.editor_elements.editor.value = new TextDecoder().decode(
-        editor_state.edit_content
-      )
+
+    let editorMsg: EditorDisplayState = {
+      start: selectionStart,
+      end: selectionEnd,
+      encoding: editor_state.editor_controls.edit_encoding,
+      cursor: editor_state.editor_controls.editor_cursor_pos,
+      radix: parseInt(editor_state.editor_elements.radix.value)
     }
+
+    console.log(editorMsg)
+    vscode.postMessage({
+      command: MessageCommand.editorOnChange,
+      data: { editor: editorMsg }
+    })
+
     editor_state.editor_elements.editor.scrollTo(
       0,
       editor_state.editor_elements.editor.scrollHeight
     )
+
     updateDataView()
   }
 
@@ -828,32 +943,7 @@
     return new Uint8Array(buf).reduce((a, b) => a + (b < 128 ? 1 : 0), 0)
   }
 
-  // determine if the given character is undefined for latin-1 (ref: https://en.wikipedia.org/wiki/ISO/IEC_8859-1)
-  function latin1Undefined(c: string): boolean {
-    const char_code = c.charCodeAt(0)
-    return char_code < 32 || (char_code > 126 && char_code < 160)
-  }
-
-  function logicalDisplay(bytes: ArrayBuffer, bytes_per_row: number): string {
-    const undefinedCharStandIn = '�'
-    let result = ''
-    if (bytes.byteLength > 0) {
-      const data = Buffer.from(bytes).toString('latin1').replaceAll('\n', ' ')
-      let i = 0
-      while (true) {
-        for (let col = 0; i < data.length && col < bytes_per_row; ++col) {
-          const c = data.charAt(i++)
-          result += (latin1Undefined(c) ? undefinedCharStandIn : c) + ' '
-        }
-        result = result.slice(0, result.length - 1)
-        if (i === data.length) {
-          break
-        }
-        result += '\n'
-      }
-    }
-    return result
-  }
+  // // determine if the given character is undefined for latin-1 (ref: https://en.wikipedia.org/wiki/ISO/IEC_8859-1)
 
   function radixBytePad(radix: number): number {
     switch (radix) {
@@ -927,8 +1017,8 @@
           )
         case 2:
           return (
-            '00000000 00111111 11112222 22222233 33333333 44444444 44555555 55556666<br/>' +
-            '01234567 89012345 67890123 45678901 23456789 01234567 89012345 67890123'
+            '00000000 00111111 11112222 22222233 33333333 44444444 44555555 55556666  <br/>' +
+            '01234567 89012345 67890123 45678901 23456789 01234567 89012345 67890123  '
           )
         case -2:
           return '0 0 0 0 0 0 0 0 <br>' + '0 1 2 3 4 5 6 7'
@@ -946,46 +1036,62 @@
     }
   }
 
+  window.addEventListener('message', (msg) => {
+    switch( msg.data.command ) {
+      case MessageCommand.loadFile:
+        loadContent(msg.data.editor.fileData)
+        editor_state.editor_elements.file_name.innerHTML = msg.data.metrics.filename
+        editor_state.editor_elements.file_type.innerHTML = msg.data.metrics.type
+        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical
+        break
+      case MessageCommand.editorOnChange:
+        editor_state.editor_elements.editor.value = msg.data.display.editor
+        break
+      case MessageCommand.addressOnChange:
+        editor_state.editor_elements.logical.innerHTML = msg.data.display.logical
+        break
+    }
+  })
+
   window.onload = () => {
     init()
   }
+
 </script>
 
 <header>
   <fieldset class="box">
-    <legend>file to view</legend>
-    <div class="filetoview">
-      <input type="file" id="file_input" />
-    </div>
-    <div id="file_metrics_vw" hidden>
+    <legend>File Metrics</legend>
+    <div id="file_metrics_vw">
+      File: <span id="file_name"> </span>
       <hr />
-      file type:<span id="file_type">-</span>
-      <br />file size: <span id="file_byte_cnt">0</span>
-      <br />ASCII count: <span id="ascii_byte_cnt">0</span>
+      Type:<span id="file_type"> </span>
+      <br />Size: <span id="file_byte_cnt"> 0</span>
+      <br />ASCII count: <span id="ascii_byte_cnt"> 0</span>
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>offset</legend>
+    <legend>Offset</legend>
     <div class="goto_offset">
       <input type="number" id="goto_offset" min="0" max="0" />
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>radix</legend>
+    <legend>Radix</legend>
     <div class="radix">
       <vscode-dropdown id="radix">
-        <vscode-option value="2">BIN</vscode-option>
+        <vscode-option value="10" selected>DEC</vscode-option>
+        <vscode-option value="16">HEX</vscode-option>
         <vscode-option value="8">OCT</vscode-option>
-        <vscode-option value="10">DEC</vscode-option>
-        <vscode-option value="16" selected>HEX</vscode-option>
+        <vscode-option value="2">BIN</vscode-option>
       </vscode-dropdown>
     </div>
   </fieldset>
   <fieldset class="box">
-    <legend>search</legend>
+    <legend>Search</legend>
     <div class="search">
       <vscode-text-field id="search">
-        search: 
+        Search: 
         <section slot="end" style="display:flex; align-items: center;">
           <vscode-button appearance="icon" aria-label="Case Sensitive">
             <span class="codicon codicon-preserve-case"></span>
@@ -996,16 +1102,16 @@
         </section>
       </vscode-text-field>
       <vscode-text-field id="replace">
-        replace: 
+        Replace: 
       </vscode-text-field>
-      <br /><vscode-button id="search_btn"disabled>search</vscode-button>
-      <vscode-button id="replace_btn"disabled>replace</vscode-button>
+      <br /><vscode-button id="search_btn"disabled>Search</vscode-button>
+      <vscode-button id="replace_btn"disabled>Replace</vscode-button>
     </div>
   </fieldset>
   <fieldset class="box">
     <legend>misc</legend>
     <div class="misc">
-      <label for="advanced_mode">advanced mode
+      <label for="advanced_mode">Advanced Mode
         <vscode-checkbox id="advanced_mode" checked/>
       </label>
     </div>
@@ -1013,31 +1119,31 @@
 </header>
 
 <main class="dataEditor" id="data_editor">
-  <div class="hd">address</div>
-  <div class="hd">physical</div>
-  <div class="hd">logical</div>
-  <div class="hd">edit</div>
+  <div class="hd">Address</div>
+  <div class="hd">Physical</div>
+  <div class="hd">Logical</div>
+  <div class="hd">Edit</div>
   <div class="measure" style="align-items: center;">
     <vscode-dropdown class="address_type" id="address_numbering">
-      <vscode-option value="10">decimal</vscode-option>
-      <vscode-option value="16">hexadecimal</vscode-option>
-      <vscode-option value="8">octal</vscode-option>
-      <vscode-option value="2">binary</vscode-option>
+      <vscode-option value="10">Decimal</vscode-option>
+      <vscode-option value="16">Hexadecimal</vscode-option>
+      <vscode-option value="8">Octal</vscode-option>
+      <!-- <vscode-option value="2">Binary</vscode-option> -->
     </vscode-dropdown>
   </div>
   <div class="measure"><span id="physical_offsets" /></div>
   <div class="measure"><span id="logical_offsets" /></div>
   <div class="measure">
     <div>
-      <span id="selected_offsets">-</span><br />
-      <span id="editor_offsets">-</span>
+      <span id="selected_offsets"> </span>
+      <span id="editor_offsets"> </span>
     </div>
   </div>
   <textarea class="address_vw" id="address" readonly />
   <textarea class="physical_vw" id="physical" readonly />
   <textarea class="logicalView" id="logical" readonly />
   <div class="editView" id="edit_view">
-    <textarea class="selectedContent" id="editor" />
+    <textarea class="selectedContent" id="editor" readonly/>
     <fieldset class="box">
       <legend>content controls</legend>
       <div class="contentControls" id="content_controls">
@@ -1045,27 +1151,27 @@
           <div>
             <vscode-button id="commit_btn" disabled>commit changes</vscode-button>
             <br/>
-            committed changes: <span id="change_cnt">0</span>
+            Committed changes: <span id="change_cnt">0</span>
           </div>
           <div>
             <vscode-button id="add_data_breakpoint_btn" disabled>set breakpoint</vscode-button>
             <br/>
-            breakpoints: <span id="data_breakpoint_cnt">0</span>
+            Breakpoints: <span id="data_breakpoint_cnt">0</span>
           </div>
         </div>
         <hr />
         <div class="grid-container-two-columns">
           <div class="grid-container-column">
             <div>
-              <label for="endianness">endianness:
+              <label for="endianness">Endianness:
                 <vscode-dropdown id="endianness">
-                  <vscode-option value="le">little</vscode-option>
-                  <vscode-option value="be">big</vscode-option>
+                  <vscode-option value="le">Little</vscode-option>
+                  <vscode-option value="be">Big</vscode-option>
                 </vscode-dropdown>
               </label>
             </div>
             <div>
-              <label for="edit_encoding">encoding:
+              <label for="edit_encoding">Encoding:
                 <select id="edit_encoding">
                   <optgroup label="Binary Encodings">
                     <option value="hex">Hexadecimal</option>
@@ -1085,15 +1191,15 @@
               </label>
             </div>
             <div class="advanced">
-              <label for="lsb">least significant bit:
+              <label for="lsb">Least significant bit:
                 <vscode-dropdown id="lsb">
-                  <vscode-option value="h">higher offset</vscode-option>
-                  <vscode-option value="l">lower offset</vscode-option>
+                  <vscode-option value="h">Higher Offset</vscode-option>
+                  <vscode-option value="l">Lower Offset</vscode-option>
                 </vscode-dropdown>
               </label>
             </div>
             <div class="advanced">
-              <label for="logical_byte_size">logical byte size:
+              <label for="logical_byte_size">Logical byte size:
                 <vscode-dropdown id="logical_byte_size">
                   <vscode-option>8</vscode-option>
                   <vscode-option>7</vscode-option>
@@ -1104,7 +1210,7 @@
           </div>
           <div class="grid-container-column">
             <div id="data_vw" hidden>
-              &nbsp;offset: <span id="offset_dv">-</span>
+              &nbsp;Offset: <span id="offset_dv">-</span>
               <span id="b8_dv">
                 <br /><label for="int8_dv">&nbsp;&nbsp;&nbsp;int8: <vscode-text-field id="int8_dv" /></label>
                 <br /><label for="uint8_dv">&nbsp;&nbsp;uint8: <vscode-text-field id="uint8_dv" /></label>
@@ -1130,7 +1236,6 @@
     </fieldset>
   </div>
 </main>
-
 <!-- svelte-ignore css-unused-selector -->
 <style lang="scss">
   /* CSS reset */
@@ -1146,6 +1251,7 @@
   /* fonts */
   main {
     font-family: monospace;
+    min-height: 100%;
   }
 
   legend {
@@ -1242,5 +1348,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-
+  #address_numbering {
+    min-width: 100%;
+  }
 </style>
