@@ -652,6 +652,10 @@
       }
 
     } else {
+      let pysichalOffsetSpread: number
+      (editor_state.editor_controls.radix === 16)
+        ? pysichalOffsetSpread = 2
+        : pysichalOffsetSpread = 3
       editor_state.editor_controls.bytes_per_row = 16
       if (
         editor_state.editor_elements.data_editor.classList.contains('binary')
@@ -661,14 +665,16 @@
       if (editor_state.file_content) {
         editor_state.editor_elements.physical.innerHTML = encodeForDisplay(
           editor_state.file_content,
-          16,
+          editor_state.editor_controls.radix,
           editor_state.editor_controls.bytes_per_row
         )
       }
+      
       editor_state.editor_elements.physical_offsets.innerHTML = makeOffsetRange(
         editor_state.editor_controls.radix,
-        2
+        pysichalOffsetSpread
       )
+
       editor_state.editor_elements.address.innerHTML = makeAddressRange(
         0,
         Math.ceil( editor_state.editor_metrics.file_byte_count / editor_state.editor_controls.bytes_per_row ),
